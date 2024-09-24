@@ -3,6 +3,18 @@
     "relatedArticles": "Related articles",
     "featured": "featured"
   },
+  "blogPage": {
+    "metaTitle": "Blog - Iglesia de Cristo Redentor",
+    "metaDescription": "Read our latest reflections and teachings on our blog. Join us on this journey of faith and growth.",
+    "title": "Latest from the blog",
+    "description": "Discover our latest reflections and see how we continue growing as a community.",
+    "viewMore": "View all articles"
+  },
+  "blogSection": {
+    "title": "Latest from the blog",
+    "description": "Discover our latest reflections and teachings. Join us on this journey of faith and learning.",
+    "viewMore": "View all articles"
+  },
   "conectemosPage": {
     "title": "Contact Us - Iglesia de Cristo Redentor",
     "description": "Get in touch with us. Find our location, activity schedules, and learn how to be part of our community in Buenos Aires.",

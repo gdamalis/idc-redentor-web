@@ -8,6 +8,13 @@ import { LanguageSelector } from '@src/components/features/language-selector';
 import { MainMenuMobile } from '@src/components/shared/main-menu';
 import { MainMenuDesktop } from '@src/components/shared/main-menu/MainMenuDesktop';
 
+const menuItems = [
+  { href: '/comunidad', label: 'Comunidad' },
+  { href: '/blog', label: 'Blog' },
+  { href: '/quien-es-jesus', label: '¿Quién es Jesús?' },
+  { href: '/conectemos', label: 'Conectemos' },
+];
+
 export const Navbar = () => {
   const { t } = useTranslation();
 
@@ -36,14 +43,14 @@ export const Navbar = () => {
               </Link>
             </div>
           </div>
-          <MainMenuDesktop />
+          <MainMenuDesktop menuItems={menuItems} />
           <div className="flex items-center pr-2 sm:ml-6 sm:pr-0">
             <LanguageSelector />
           </div>
         </div>
       </div>
 
-      <MainMenuMobile />
+      <MainMenuMobile menuItems={menuItems} />
     </Disclosure>
   );
 };

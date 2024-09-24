@@ -3,6 +3,18 @@
     "relatedArticles": "Artículos relacionados",
     "featured": "destacado"
   },
+  "blogPage": {
+    "metaTitle": "Blog - Iglesia de Cristo Redentor",
+    "metaDescription": "Leé nuestras reflexiones y enseñanzas más recientes en nuestro blog. Seguinos en este viaje de fe y crecimiento.",
+    "title": "Últimos artículos del blog",
+    "description": "Conocé nuestras reflexiones más recientes y descubrí cómo seguimos creciendo en comunidad.",
+    "viewMore": "Ver todos los artículos"
+  },
+  "blogSection": {
+    "title": "Últimos artículos del blog",
+    "description": "Conocé nuestras reflexiones y enseñanzas más recientes. Seguinos en este viaje de fe y aprendizaje.",
+    "viewMore": "Ver todos los artículos"
+  },
   "conectemosPage": {
     "title": "Conectemos - Iglesia de Cristo Redentor",
     "description": "Ponete en contacto con nosotros. Encontrá nuestra ubicación, horarios de actividades, y cómo ser parte de nuestra comunidad en Buenos Aires.",

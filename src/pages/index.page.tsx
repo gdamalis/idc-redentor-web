@@ -2,12 +2,19 @@ import { GetStaticProps, NextPage } from 'next';
 import { useTranslation } from 'next-i18next';
 import Head from 'next/head';
 
+import { BlogSection } from '@src/components/features/blog-section';
 import { ContactCta } from '@src/components/features/contact-cta';
 import { OurMission } from '@src/components/features/our-mission/OurMission';
+import { fetchDummyBlogPosts } from '@src/data/sample-blog-posts';
 import { revalidateDuration } from '@src/pages/utils/constants';
 import { getServerSideTranslations } from '@src/pages/utils/get-serverside-translations';
+import { BlogPost } from '@src/types/BlogPost';
 
-const HomePage: NextPage = () => {
+type HomePageProps = {
+  posts: BlogPost[];
+};
+
+const HomePage: NextPage<HomePageProps> = ({ posts }: HomePageProps) => {
   const { t } = useTranslation();
 
   return (
@@ -24,6 +31,7 @@ const HomePage: NextPage = () => {
       </Head>
       <main>
         <OurMission />
+        <BlogSection posts={posts} />
         <ContactCta />
       </main>
     </>
@@ -51,11 +59,13 @@ export const getStaticProps: GetStaticProps = async ({ locale }) => {
     //     notFound: true,
     //   };
     // }
+    const posts = await fetchDummyBlogPosts();
 
     return {
       revalidate: revalidateDuration,
       props: {
         ...(await getServerSideTranslations(locale)),
+        posts,
       },
     };
   } catch {

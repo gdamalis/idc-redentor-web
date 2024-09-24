@@ -2,13 +2,13 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import React from 'react';
 
-const menuItems = [
-  { href: '/comunidad', label: 'Comunidad' },
-  { href: '/conectemos', label: 'Conectemos' },
-  { href: '/quien-es-jesus', label: '¿Quién es Jesús?' },
-];
+import { MenuItem } from '@src/types/MenuItem';
 
-export const MainMenuDesktop = () => {
+type MainMenuDesktopProps = {
+  menuItems: MenuItem[];
+};
+
+export const MainMenuDesktop = ({ menuItems }: MainMenuDesktopProps) => {
   const router = useRouter();
   const [currentPath, setCurrentPath] = React.useState(router.pathname);
 
