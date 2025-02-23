@@ -30,6 +30,23 @@
     "title": "Join a diverse and loving community, where we get to know Jesus together.",
     "ctaButton": "Connect with us"
   },
+  "coming-soon": {
+    "message": {
+      "line-1": "We are preparing an online experience that reflects the warmth, love, and call to vocation of our community.",
+      "line-2": "At the Redentor Church of Christ, we are dedicated to proclaiming the good news of the Kingdom of God and living out Jesus’ transformative example, inviting you to respond to his personal call to service and commitment."
+    },
+    "metadata": {
+      "title": "Redentor Church of Christ - Connecting, Communicating, and Growing",
+      "description": "Welcome to the Redentor Church of Christ. Soon you will discover a site that reflects faith, vocation, and love."
+    },
+    "notify": {
+      "descriptions": "Soon, we will invite you to connect with our message and mission, walking with us on a journey of faith, service, and transformation. Stay tuned for our launch!",
+      "placeholder": "Enter your email address",
+      "cta-text": "Notify me!",
+      "input-sr-label": "Email address"
+    },
+    "title": "Coming Soon"
+  },
   "comunidadPage": {
     "headerTitle": "Our <highlight>Community</highlight>",
     "title": "Our Community",
@@ -78,7 +95,7 @@
     "title": "Subscribe to our newsletter",
     "description": "Stay informed about our activities and stay connected with the community.",
     "placeholder": "Enter your email address",
-    "ctaButton": "Subscribe",
-    "srLabel": "Email address"
+    "cta-text": "Subscribe",
+    "input-sr-label": "Email address"
   }
 }

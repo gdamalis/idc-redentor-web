@@ -30,6 +30,23 @@
     "title": "Unite a una comunidad diversa y amorosa, donde conocemos juntos a Jesús.",
     "ctaButton": "Conectemos"
   },
+  "coming-soon": {
+    "message": {
+      "line-1": "Estamos preparando una experiencia en línea que refleje la calidez, el amor y el llamado a la vocación de nuestra comunidad.",
+      "line-2": "En la Iglesia de Cristo Redentor nos dedicamos a proclamar las buenas nuevas del Reino de Dios y a vivir el ejemplo transformador de Jesús, invitándote a responder a su llamado personal de servicio y compromiso."
+    },
+    "metadata": {
+      "title": "Iglesia de Cristo Redentor - Conectando, Comunicando y Creciendo",
+      "description": "Bienvenido a la Iglesia de Cristo Redentor. Pronto descubrirás un sitio que refleja fe, vocación y amor."
+    },
+    "notify": {
+      "description": "Pronto, te invitaremos a conectarte con nuestro mensaje y misión, viviendo junto a nosotros un camino de fe, servicio y transformación. ¡Mantente atento a nuestro lanzamiento!",
+      "placeholder": "Ingresá tu correo electrónico",
+      "cta-text": "¡Avísame!",
+      "input-sr-label": "Correo electrónico"
+    },
+    "title": "Próximamente"
+  },
   "comunidadPage": {
     "headerTitle": "Nuestra <highlight>Comunidad</highlight>",
     "title": "Nuestra Comunidad",
@@ -78,7 +95,7 @@
     "title": "Suscribite a nuestro boletín",
     "description": "Enterate de nuestras actividades y mantenete en contacto con la comunidad.",
     "placeholder": "Ingresá tu correo electrónico",
-    "ctaButton": "Suscribite",
-    "srLabel": "Correo electrónico"
+    "cta-text": "Suscribite",
+    "input-sr-label": "Correo electrónico"
   }
 }
