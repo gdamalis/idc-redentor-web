@@ -39,7 +39,5 @@ export async function getSeo(
     isDraftMode,
   );
 
-  console.log(data);
-
   return data?.data?.seoCollection?.items[0];
 }
