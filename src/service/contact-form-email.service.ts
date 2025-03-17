@@ -1,6 +1,6 @@
+import { renderTemplate } from "@src/templates/template-engine";
 import { ContactDetails } from "@src/types/ContactDetails";
-import { FROM_EMAIL, sendEmail } from "../mailing.service";
-import { renderTemplate } from "./utils/template-engine";
+import { FROM_EMAIL, sendEmail } from "./mailing.service";
 
 const RECIPIENT_EMAIL = process.env.CONTACT_FORM_RECIPIENT_EMAIL ?? FROM_EMAIL;
 

@@ -2,7 +2,7 @@
 
 import { ContactDetails } from "@src/types/ContactDetails";
 import { sendContactForm } from "@src/service/contact.service";
-import { sendContactFormEmail } from "@src/service/email-templates/contact-form-email.service";
+import { sendContactFormEmail } from "@src/service/contact-form-email.service";
 
 type ActionResult = {
   success: boolean;
