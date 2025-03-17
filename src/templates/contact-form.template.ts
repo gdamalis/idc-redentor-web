@@ -28,7 +28,7 @@ export const CONTACT_FORM_TEMPLATE = `
         text-align: center;
       }
       .email-header img {
-        max-width: 200px;
+        max-width: 72px;
         height: auto;
       }
       .email-content {
