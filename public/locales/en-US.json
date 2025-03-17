@@ -41,8 +41,9 @@
     "latestArticles": "Latest articles"
   },
   "notFound": {
-    "title": "Page not found",
-    "description": "This page doesn't seem to exist. <0>Click here</0> to go back the homepage."
+    "title": "Page not found | 404",
+    "description": "This page doesn't seem to exist",
+    "backToHome": "Back to homepage"
   },
   "sitename": "Redentor Church of Christ",
   "status": {

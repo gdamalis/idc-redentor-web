@@ -7,7 +7,7 @@ import { routing } from "@src/i18n/routing";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Metadata } from "next";
-import { NextIntlClientProvider } from "next-intl";
+import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 import { Nunito_Sans } from "next/font/google";
 import { draftMode } from "next/headers";
@@ -36,6 +36,11 @@ export default async function LocaleLayout({
   readonly params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
+
+  if (!hasLocale(routing.locales, locale)) {
+    notFound();
+  }
+
   setRequestLocale(locale);
 
   const { isEnabled } = await draftMode();
@@ -46,11 +51,6 @@ export default async function LocaleLayout({
     locale,
     isEnabled,
   );
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  if (!routing.locales.includes(locale as any)) {
-    notFound();
-  }
 
   const messages = await getMessages();
 

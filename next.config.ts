@@ -1,9 +1,9 @@
 import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
+import headersConfig from "./config/headers";
 
 const withNextIntl = createNextIntlPlugin();
 const nextConfig: NextConfig = {
-  /* config options here */
   images: {
     remotePatterns: [
       {
@@ -23,19 +23,7 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  headers: async () => {
-    return [
-      {
-        source: "/(.*)",
-        headers: [
-          {
-            key: "Content-Security-Policy",
-            value: "frame-ancestors 'self' https://app.contentful.com",
-          },
-        ],
-      },
-    ];
-  },
+  headers: headersConfig,
 };
 
 export default withNextIntl(nextConfig);

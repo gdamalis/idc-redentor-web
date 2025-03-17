@@ -41,8 +41,9 @@
     "latestArticles": "Últimos artículos"
   },
   "notFound": {
-    "title": "Página no encontrada",
-    "description": "Esta página no parece existir. <0>Haga clic aquí</0> para volver a la página principal."
+    "title": "Página no encontrada | 404",
+    "description": "Esta página no parece existir",
+    "backToHome": "Volver a la página principal"
   },
   "sitename": "Iglesia de Cristo Redentor",
   "status": {
