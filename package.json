@@ -20,11 +20,13 @@
     "@tailwindcss/typography": "^0.5.16",
     "@vercel/analytics": "^1.5.0",
     "@vercel/speed-insights": "^1.2.0",
+    "clsx": "^2.1.1",
     "mongodb": "^6.14.2",
     "next": "15.1.7",
     "next-intl": "^4.0.2",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "tailwind-merge": "^3.0.2"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

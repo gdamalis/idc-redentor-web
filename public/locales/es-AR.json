@@ -1,12 +1,10 @@
 {
   "article": {
-    "relatedArticles": "Artículos relacionados",
     "featured": "destacado"
   },
   "BlogPost": {
     "more-posts": "Otros artículos",
-    "written-by": "Escrito por",
-    "on-date": "el {date}"
+    "related": "Artículos Relacionados"
   },
   "Blog": {
     "title": "Últimos artículos del blog",

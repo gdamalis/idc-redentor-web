@@ -1,34 +1,48 @@
 "use client";
 
 import { Typography } from "@src/components/ui/typography";
-import { useLocale, useTranslations } from "next-intl";
+import { formatDate } from "@src/utils/formatDate";
+import { useLocale } from "next-intl";
+import Image from "next/image";
 
 type AuthorInfoProps = {
-  authorName: string;
+  authorDetails: {
+    name: string;
+    avatar: {
+      url: string;
+      title: string;
+    };
+  };
   publishedDate: string;
 };
 
 export function AuthorInfo({
-  authorName,
+  authorDetails,
   publishedDate,
 }: Readonly<AuthorInfoProps>) {
-  const t = useTranslations("BlogPost");
   const locale = useLocale();
 
-  const formattedDate = new Date(publishedDate).toLocaleDateString(locale, {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
-
-  const authorText = t("written-by");
-  const dateText = t("on-date", { date: formattedDate });
+  const formattedDate = formatDate(publishedDate, locale);
 
   return (
-    <div className="mt-4 text-sm text-gray-500">
-      <Typography component="p" variant="body1">
-        {authorText} <span className="font-semibold text-gray-900">{authorName}</span> {dateText}
-      </Typography>
+    <div className="flex items-center gap-4 text-gray-500">
+      <div className="flex items-center gap-2">
+        <Image
+          src={authorDetails.avatar.url}
+          alt={authorDetails.avatar.title}
+          width={36}
+          height={36}
+          className="rounded-full"
+        />
+      </div>
+      <div className="flex flex-col gap-1">
+        <Typography component="p" variant="overline" className="font-semibold tracking-wide dark:text-gray-300">
+          {authorDetails.name}
+        </Typography>
+        <Typography component="p" variant="overline" className="tracking-wide">
+          {formattedDate}
+        </Typography>
+      </div>
     </div>
   );
 }

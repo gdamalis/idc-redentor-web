@@ -1,12 +1,10 @@
 {
   "article": {
-    "relatedArticles": "Related articles",
     "featured": "featured"
   },
   "BlogPost": {
     "more-posts": "Other articles",
-    "written-by": "Written by",
-    "on-date": "on {date}"
+    "related": "Related Articles"
   },
   "Blog": {
     "title": "Latest from the blog",
