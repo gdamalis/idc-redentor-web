@@ -17,7 +17,7 @@ export const BlogPostCard = ({ post }: BlogPostCardProps) => {
   return (
     <article
       key={post.sys.id}
-      className="relative isolate flex flex-col justify-end overflow-hidden rounded-2xl bg-gray-900 px-8 pb-8 pt-80 sm:pt-48 lg:pt-80"
+      className="relative isolate flex flex-col justify-end overflow-hidden rounded-lg bg-gray-900 px-8 pb-8 pt-80 sm:pt-48 lg:pt-80"
     >
       <Image
         alt={post.featuredImage.title}
@@ -26,11 +26,11 @@ export const BlogPostCard = ({ post }: BlogPostCardProps) => {
         height={780}
         className="absolute inset-0 -z-10 h-full w-full object-cover"
       />
-      <div className="absolute inset-0 -z-10 bg-gradient-to-t from-gray-900 via-gray-900/40" />
-      <div className="absolute inset-0 -z-10 rounded-2xl ring-1 ring-inset ring-gray-900/10" />
+      <div className="absolute inset-0 -z-10 bg-gradient-to-t from-gray-900 via-gray-900/70" />
+      <div className="absolute inset-0 -z-10 rounded-lg ring-1 ring-inset ring-gray-900/10" />
 
       <div className="flex flex-wrap items-center gap-y-1 gap-x-3 overflow-hidden text-sm leading-6 text-gray-300">
-        <time dateTime={post.publishedDate} className="">
+        <time dateTime={post.publishedDate}>
           {formattedDate}
         </time>
         <svg
@@ -39,16 +39,13 @@ export const BlogPostCard = ({ post }: BlogPostCardProps) => {
         >
           <circle r={1} cx={1} cy={1} />
         </svg>
-        <div className="flex gap-x-2.5">
-          <Image
-            alt={post.author.avatar.title}
-            src={post.author.avatar.url}
-            width={24}
-            height={24}
-            className="h-6 w-6 flex-none rounded-full bg-white/10"
-          />
+        <Typography
+          component="p"
+          variant="body2"
+          className="text-gray-300"
+        >
           {post.author.name}
-        </div>
+        </Typography>
       </div>
       <Typography
         component="h3"
