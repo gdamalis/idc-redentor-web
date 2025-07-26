@@ -2,7 +2,7 @@ import { fetchGraphQL } from "./fetch";
 
 const GRAPHQL_FIELDS = `
   headline
-  subline
+  subtitle
   body {
     json
   }
