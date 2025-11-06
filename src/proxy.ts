@@ -4,7 +4,7 @@ import { routing } from "./i18n/routing";
 
 const intlMiddleware = createMiddleware(routing);
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   // Handle CORS preflight requests
   if (request.method === "OPTIONS") {
     return new NextResponse(null, { status: 200 });
@@ -46,3 +46,4 @@ export const config = {
     "/((?!_next|_vercel|api|trpc).*)",
   ],
 };
+
