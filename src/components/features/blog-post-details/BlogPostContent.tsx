@@ -23,10 +23,30 @@ const richTextOptions: Options = {
         {children}
       </Typography>
     ),
+    [BLOCKS.HEADING_3]: (node, children) => (
+      <Typography component="h3" variant="h3">
+        {children}
+      </Typography>
+    ),
     [BLOCKS.QUOTE]: (node, children) => (
       <Typography component="blockquote" variant="blockquote">
         {children}
       </Typography>
+    ),
+    [BLOCKS.UL_LIST]: (node, children) => (
+      <ul className="list-disc pl-5 space-y-2 mb-4">
+        {children}
+      </ul>
+    ),
+    [BLOCKS.OL_LIST]: (node, children) => (
+      <ol className="list-decimal pl-5 space-y-2 mb-4">
+        {children}
+      </ol>
+    ),
+    [BLOCKS.LIST_ITEM]: (node, children) => (
+      <li className="space-y-2">
+        {children}
+      </li>
     ),
   },
 };

@@ -38,12 +38,12 @@ export const Typography = ({
     h4: "text-lg",
     h5: "text-md",
     h6: "text-base",
-    body: "text-lg leading-7 sm:text-xl sm:leading-8",
+    body: "text-lg leading-7 sm:text-xl sm:leading-8 mb-4",
     body1: "text-base",
     body2: "text-sm",
     caption: "text-xs",
     overline: "text-xs uppercase",
-    blockquote: "text-lg md:text-xl italic my-6 py-4 px-6 border-l-4 border-gray-400 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/50 rounded-r-lg",
+    blockquote: "text-lg md:text-xl italic my-4 py-4 px-6 border-l-4 border-gray-400 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/50 rounded-r-lg",
   };
 
   const headingStyles = "font-bold text-gray-900 dark:text-gray-100";
