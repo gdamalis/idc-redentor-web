@@ -3,15 +3,16 @@ import { Link } from "@src/i18n/routing";
 import { BlogPost } from "@src/types/BlogPost";
 import Image from "next/image";
 import { Divider } from "@src/components/ui/divider";
+import { formatDate } from "@src/utils/formatDate";
 
 type RelatedArticlesProps = {
   posts: BlogPost[];
-  formattedDate: string;
+  locale: string;
 };
 
 export function RelatedArticles({
   posts,
-  formattedDate,
+  locale,
 }: Readonly<RelatedArticlesProps>) {
   if (!posts || posts.length === 0) {
     return null;
@@ -38,7 +39,7 @@ export function RelatedArticles({
                         dateTime={post.publishedDate}
                         className="uppercase text-xs"
                       >
-                        {formattedDate}
+                        {formatDate(post.publishedDate, locale)}
                       </time>
                       {post.author && (
                         <>
