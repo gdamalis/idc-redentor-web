@@ -14,6 +14,15 @@ const GRAPHQL_FIELDS = `
       }
     }
   }
+  location {
+    ... on LocationComponent {
+      addressLine1
+      neighborhood
+      city
+      country
+      googleMapsUrl
+    }
+  }
   sys {
     id
   }
@@ -40,6 +49,7 @@ export async function getFooter(locale: string, isDraftMode = false) {
     shortDescription: data?.data?.footerCollection?.items[0].shortDescription,
     socialLinks:
       data?.data?.footerCollection?.items[0].socialLinksCollection.items,
+    location: data?.data?.footerCollection?.items[0].location,
   };
 
   return footerData;

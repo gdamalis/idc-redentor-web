@@ -15,6 +15,7 @@ const GRAPHQL_FIELDS = `
       city
       country
       mapEmbedUrl
+      googleMapsUrl
     }
   }
   image {

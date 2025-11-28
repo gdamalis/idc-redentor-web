@@ -2,7 +2,7 @@ import { Typography } from "@src/components/ui/typography";
 import { Link } from "@src/i18n/routing";
 import { useTranslations } from "next-intl";
 import Image from "next/image";
-import { Facebook, Instagram, Youtube, Mail, MapPin, Phone } from "lucide-react";
+import { Mail, MapPin } from "lucide-react";
 
 import { SubscribeForm } from "@src/components/shared/subscribe-form/SubscribeForm";
 import SocialLinks from "../social-links/SocialLinks";
@@ -13,6 +13,13 @@ type FooterProps = {
     logo: { url: string; title: string };
     shortDescription: string;
     socialLinks: { url: string; platform: string }[];
+    location?: {
+      addressLine1: string;
+      neighborhood: string;
+      city: string;
+      country: string;
+      googleMapsUrl: string;
+    };
   };
   subscribeContent: {
     title: string;
@@ -67,7 +74,9 @@ export const Footer = ({ content, subscribeContent }: FooterProps) => {
 
           {/* Quick Links */}
           <div>
-            <h3 className="font-serif font-bold text-lg mb-6">{t("footer.explore")}</h3>
+            <h3 className="font-serif font-bold text-lg mb-6">
+              {t("footer.explore")}
+            </h3>
             <ul className="space-y-3">
               {quickLinks.map((item) => (
                 <li key={item.href}>
@@ -82,48 +91,53 @@ export const Footer = ({ content, subscribeContent }: FooterProps) => {
             </ul>
           </div>
 
-          {/* Contact - Placeholder for now */}
+          {/* Contact */}
           <div>
-            <h3 className="font-serif font-bold text-lg mb-6">{t("footer.visit-us")}</h3>
+            <h3 className="font-serif font-bold text-lg mb-6">
+              {t("footer.visit-us")}
+            </h3>
             <ul className="space-y-4 text-slate-400">
-              <li className="flex items-start gap-3">
-                <MapPin className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                <span>
-                  Buenos Aires<br />
-                  Argentina
-                </span>
-              </li>
+              {content.location && (
+                <li className="flex items-start gap-3">
+                  <MapPin className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                  <a
+                    href={content.location.googleMapsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-primary transition-colors"
+                  >
+                    {content.location.addressLine1}
+                    <br />
+                    {content.location.neighborhood &&
+                      content.location.neighborhood + ", "}
+                    {content.location.city}
+                    <br />
+                    {content.location.country}
+                  </a>
+                </li>
+              )}
               <li className="flex items-center gap-3">
                 <Mail className="w-5 h-5 text-primary shrink-0" />
-                <span>contacto@redentor.org</span>
+                <a
+                  href="mailto:info@idcredentor.com"
+                  className="hover:text-primary transition-colors"
+                >
+                  info@idcredentor.com
+                </a>
               </li>
             </ul>
           </div>
 
           {/* Social & Subscribe */}
           <div>
-            <h3 className="font-serif font-bold text-lg mb-6">{t("footer.follow-us")}</h3>
-            <div className="flex gap-4 mb-6">
-              {content.socialLinks.map((link, i) => {
-                const Icon =
-                  link.platform === "Facebook"
-                    ? Facebook
-                    : link.platform === "Instagram"
-                      ? Instagram
-                      : Youtube;
-                return (
-                  <a
-                    key={i}
-                    href={link.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="bg-slate-800 p-3 rounded-full hover:bg-primary hover:text-white transition-all hover:-translate-y-1"
-                  >
-                    <Icon className="w-5 h-5" />
-                  </a>
-                );
-              })}
-            </div>
+            <h3 className="font-serif font-bold text-lg mb-6">
+              {t("footer.follow-us")}
+            </h3>
+            <SocialLinks 
+              links={content.socialLinks} 
+              variant="footer"
+              className="mb-6"
+            />
             <div className="mt-4">
               <SubscribeForm content={subscribeContent} />
             </div>
