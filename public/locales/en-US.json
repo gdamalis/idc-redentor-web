@@ -34,6 +34,10 @@
     "visit-us": "Visit Us",
     "follow-us": "Follow Us"
   },
+  "navbar": {
+    "church-name": "Church of Christ",
+    "church-subtitle": "Redeemer"
+  },
   "landingPage": {
     "latestArticles": "Latest articles"
   },

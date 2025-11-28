@@ -34,6 +34,10 @@
     "visit-us": "Visitanos",
     "follow-us": "Seguinos"
   },
+  "navbar": {
+    "church-name": "Iglesia de Cristo",
+    "church-subtitle": "Redentor"
+  },
   "landingPage": {
     "latestArticles": "Últimos artículos"
   },

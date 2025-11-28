@@ -59,7 +59,7 @@ export const Navbar = ({ menuItems = [] }: NavbarProps) => {
                 isScrolled ? "text-foreground" : "text-white",
               )}
             >
-              Iglesia de Cristo
+              {t("navbar.church-name")}
             </span>
             <span
               className={cn(
@@ -67,7 +67,7 @@ export const Navbar = ({ menuItems = [] }: NavbarProps) => {
                 isScrolled ? "text-primary" : "text-white/90",
               )}
             >
-              Redentor
+              {t("navbar.church-subtitle")}
             </span>
           </div>
         </Link>
