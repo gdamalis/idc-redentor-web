@@ -81,7 +81,7 @@ export const SubscribeForm = ({
             required
             placeholder={content.inputPlaceholder}
             autoComplete="email"
-            className={`w-full min-w-0 appearance-none rounded-l-2xl rounded-r-none border-0  px-3 py-1.5 text-base text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-1 focus:ring-inset focus:ring-primary sm:w-56 ${sizeClasses.input}`}
+            className={`w-full min-w-0 appearance-none rounded-l-2xl rounded-r-none border-0  px-3 py-1.5 text-base text-white shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-1 focus:ring-inset focus:ring-primary sm:w-56 ${sizeClasses.input}`}
           />
           <div className="text-center sm:shrink-0">
             <button
