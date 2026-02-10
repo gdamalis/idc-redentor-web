@@ -7,7 +7,9 @@ import { getCtaComponent } from "@lib/contentful/getCtaComponent";
 import { buildArticleJsonLd, buildArticleMetadata } from "@lib/metadata";
 import BlogPostDetails from "@src/components/features/blog-post-details/BlogPostDetails";
 import { ComponentCta } from "@src/components/features/component-cta";
+import { getLikes } from "@src/service/like.service";
 import { Metadata } from "next";
+import { cookies } from "next/headers";
 import { setRequestLocale } from "next-intl/server";
 
 type PostDetailsPageParams = {
@@ -64,6 +66,10 @@ export default async function PostDetailsPage({
     isEnabled,
   );
 
+  const cookieStore = await cookies();
+  const visitorId = cookieStore.get("_visitor_id")?.value;
+  const likesData = await getLikes(slug, visitorId);
+
   const jsonLd = buildArticleJsonLd(post, locale);
 
   return (
@@ -72,7 +78,13 @@ export default async function PostDetailsPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <BlogPostDetails post={post} relatedPosts={latestPosts} locale={locale} />
+      <BlogPostDetails
+        post={post}
+        relatedPosts={latestPosts}
+        locale={locale}
+        initialLikeCount={likesData.count}
+        initialHasLiked={likesData.hasLiked}
+      />
       <ComponentCta content={contactCta} />
     </>
   );
