@@ -15,6 +15,8 @@ const eslintConfig = [
       "src/**/__generated",
       ".next/**",
       "node_modules/**",
+      ".claude/**",
+      "coverage/**",
     ],
   },
   {

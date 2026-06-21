@@ -1,10 +1,19 @@
-#!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
-
-# Get current branch name
-branch=$(git rev-parse --abbrev-ref HEAD)
-
-# Only run type-check and lint on main branch
-if [ "$branch" = "main" ]; then
-  pnpm run type-check && pnpm run lint
+# --- Secret guard: refuse to commit env/secret files (allow .env.example) ---
+staged="$(git diff --cached --name-only --diff-filter=ACM)"
+blocked="$(printf '%s\n' "$staged" | grep -E '(^|/)\.env($|\.)|\.local$' | grep -vE '\.env\.example$' || true)"
+if [ -n "$blocked" ]; then
+  echo "✗ Refusing to commit env/secret files:"
+  printf '   %s\n' $blocked
+  echo "  Unstage them (git restore --staged <file>) or add to .gitignore."
+  exit 1
 fi
+
+# --- Secret-content scan on the staged diff (ICR providers; exclude the lockfile) ---
+if git diff --cached -- . ':(exclude)pnpm-lock.yaml' \
+  | grep -nE 'mongodb(\+srv)?://[^@[:space:]]+@|SG\.[A-Za-z0-9_-]{16,}\.[A-Za-z0-9_-]{16,}|re_[A-Za-z0-9]{20,}|CFPAT-[A-Za-z0-9_-]{20,}|[0-9a-f]{32}-us[0-9]{1,2}' >/dev/null; then
+  echo "✗ Possible secret in staged changes (Mongo URI / SendGrid / Resend / Contentful / Mailchimp key). Aborting."
+  exit 1
+fi
+
+# --- Lint + format staged files on EVERY branch (was main-only) ---
+pnpm exec lint-staged
