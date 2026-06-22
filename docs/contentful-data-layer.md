@@ -15,7 +15,7 @@ src/app/[locale]/**            RSC pages call the getters       ← the consumer
 
 > This is the app's **read** path (Delivery/Preview GraphQL API). There is a separate,
 > agent-only **write** path: Claude Code agents talk to Contentful's Management API through
-> the MCP server in `.mcp.json` (token-based, writes scoped to a sandbox environment). The
+> the Contentful MCP server (token-based, writes scoped to a sandbox environment). The
 > two never mix — see `docs/contentful-mcp.md`.
 
 ## `fetchGraphQL` — the only transport
