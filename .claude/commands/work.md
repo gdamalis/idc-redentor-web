@@ -110,6 +110,28 @@ If `config.graphify.enabled` is `false`, set both flags to false and skip this s
 4. **Commit-type inference** from labels via `config.tracker.labelToCommitType`: `Bug`→`fix`, `Feature`→`feat`, `Integration`→`feat`|`chore` (pick after brainstorm), `NFR`→`chore` (or `refactor`/`perf`). Override if `card.name` explicitly starts with `chore:`/`docs:`/etc.
 5. **Already-past guard**: if the card currently sits in `In Review` or `Done` (any `config.tracker.workflow` entry with `order > inProgress.order`), stop and ask the user whether to continue. If it sits in `Backlog`/`To Do`, proceed. If its list isn't in `config.tracker.lists`, surface the drift rather than proceeding silently.
 
+## 1.5 Entry gate — needs-refinement  ★ HUMAN GATE ★
+
+This gate runs **after the card is resolved** (right after the already-past guard bullet above) and **BEFORE any side effect** — no worktree, no branch, and no `To Do → In Progress` move yet. Its job: refuse to start work on an un-refined card.
+
+> **Invariant:** This gate runs BEFORE Move #1. A card that fails the gate is never moved `To Do → In Progress`, never gets a worktree, and never gets a state file.
+
+1. **Resolve the matchers from config** (pinned in pre-flight): `config.tracker.needsRefinementChecklistName` (e.g. `"Refinement"`) and `config.tracker.needsRefinementItemText` (e.g. `"needs-refinement"`). Read the values from config — do **not** hardcode the literals.
+2. **Read the card's refinement checklist** via the Trello MCP. Load the deferred tools first: ToolSearch `select:mcp__trello__get_checklist_by_name,mcp__trello__get_checklist_items,mcp__trello__find_checklist_items_by_description`. Then:
+   - `mcp__trello__get_checklist_by_name(cardId, name=<needsRefinementChecklistName>)`.
+   - If found, `mcp__trello__get_checklist_items` on it and look for an item whose text matches `<needsRefinementItemText>` and whose state is **OPEN** (treat ANY non-complete state as open — `state: "incomplete"` / `checked: false` / not `"complete"`).
+   - Fallback: `mcp__trello__find_checklist_items_by_description(cardId, description=<needsRefinementItemText>)`.
+3. **Gate decision:**
+   - **PASS** — if there is no Refinement checklist, OR no matching item, OR the matching item is checked/complete → the card is `/work`-ready. Proceed to section 2.
+   - **STOP + carrail** — if an **OPEN** needs-refinement item exists → STOP before any worktree/move and present a carrail via `AskUserQuestion` (same mechanism as the step-8.1 / step-15 prompts):
+     > Card `ICR-N` still has an open `needs-refinement` item — it is not `/work`-ready. What now?
+
+     Two single-select options:
+     - **(a) Refine now** — dispatch the `product-manager` subagent with `mode: refine` and the `ICR-N` card. Wait for it to return (it clears the `needs-refinement` checklist item per its own lifecycle when the card meets the ready bar). Then **RE-READ the checklist** (repeat step 2):
+       - if the item is now cleared → proceed to section 2;
+       - if `product-manager` left it open (still not ready) → report what it said is missing and **STOP cleanly** (no worktree, no move, no state file).
+     - **(b) Pick another ticket** — abort cleanly: **NO** worktree, **NO** Trello move, **NO** state file. Print: "Stopped: `ICR-N` is not refined. Run `/pm` to refine it, or `/work <other-ICR>`." and end.
+
 ## 2. Create worktree + branch  ★ MANDATORY
 
 **Every `/work` invocation runs in its own worktree. No exceptions.** The user works 3–6 tickets in parallel. All worktrees live inside the **main repo's** `.claude/worktrees/` directory (gitignored).
