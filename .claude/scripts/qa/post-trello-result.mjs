@@ -11,10 +11,13 @@
 //
 // Usage:   node .claude/scripts/qa/post-trello-result.mjs <payload.json>
 //
-// Payload (written by /qa to a 0600 temp file):
+// Payload (written by /qa, /work, or /merge to a 0600 temp file):
 //   { cardId, cardShortLink, ticketKey:"ICR-45", qaEnvPath, configPath, dryRun,
-//     meta:{title,testedAt,envName,host,previewUrl,testType,buildUnderTest,mode,runId},
+//     meta:{title,testedAt,envName,host,targetUrl,previewUrl,testType,buildUnderTest,mode,runId,postedBy},
 //     result:{...agent block 1...}, evidence:[{path,caption,ac}] }
+//   meta.envName is REQUIRED ("preview" | "staging") — no silent default; the run exits 2 if absent.
+//   meta.postedBy ("/qa" | "/work" | "/merge") sets the footer provenance; defaults to "/qa".
+//   meta.targetUrl is the env's base URL (preview OR staging); previewUrl is kept as a back-compat alias.
 //
 // Trello creds come from qa-env.json (path = payload.qaEnvPath):
 //   { "trello": { "apiKey": "...", "token": "..." } }
@@ -95,16 +98,24 @@ function renderMarkdown({ ticketKey, meta, result, attached }) {
   const sum = r.summary ?? {};
   const lines = [];
 
+  // Provenance: which command posted this. Valid: "/qa" | "/work" | "/merge"; default "/qa".
+  const postedBy = present(m.postedBy) ? m.postedBy : "/qa";
+  // Env-aware URL label: "Staging:" for staging, else "Preview:". Read the active env name.
+  const envName = String(m.envName ?? "");
+  const urlLabel = envName === "staging" ? "Staging" : "Preview";
+  // The target URL is the active env's base URL; previewUrl is the back-compat alias.
+  const targetUrl = m.targetUrl ?? m.previewUrl ?? r.previewUrl;
+
   lines.push(`🔎 **QA Report — ${cell(ticketKey)}: ${cell(m.title ?? r.summaryTitle ?? "")}**`);
   lines.push("");
   lines.push(`**Status:** ${STATUS_EMOJI[r.status] ?? scrub(String(r.status ?? "—"))}`);
   lines.push(
-    `**Tested:** ${scrub(String(m.testedAt ?? ""))} · env: ${scrub(String(m.envName ?? "preview"))} (${scrub(
+    `**Tested:** ${scrub(String(m.testedAt ?? ""))} · env: ${scrub(String(m.envName ?? ""))} (${scrub(
       String(m.host ?? ""),
     )}) · type: ${scrub(String(m.testType ?? r.testType ?? ""))}`,
   );
-  if (present(m.previewUrl) || present(r.previewUrl)) {
-    lines.push(`**Preview:** ${scrub(String(m.previewUrl ?? r.previewUrl ?? ""))}`);
+  if (present(targetUrl)) {
+    lines.push(`**${urlLabel}:** ${scrub(String(targetUrl))}`);
   }
   lines.push(`**Build under test:** ${scrub(String(m.buildUnderTest ?? r.buildUnderTest ?? ""))}`);
   lines.push(`**Mode:** ${scrub(String(m.mode ?? ""))} · **Run:** ${scrub(String(m.runId ?? ""))}`);
@@ -173,7 +184,7 @@ function renderMarkdown({ ticketKey, meta, result, attached }) {
   }
   lines.push("");
 
-  lines.push("_Posted by /qa · do not edit — re-run /qa to refresh._");
+  lines.push(`_Posted by ${scrub(postedBy)} · do not edit — re-run ${scrub(postedBy)} to refresh._`);
 
   return scrub(lines.join("\n"));
 }
@@ -228,6 +239,8 @@ async function main() {
 
   const { cardId, ticketKey, qaEnvPath, dryRun } = payload;
   if (!present(ticketKey)) die(2, "payload.ticketKey is required");
+  if (!present(payload.meta?.envName))
+    die(2, "payload.meta.envName is required (preview|staging) — no silent default");
 
   // Normalize evidence: a bare string is a path; otherwise {path,caption,ac}. Keep present paths.
   const evidence = (payload.evidence ?? payload.result?.evidence ?? [])
