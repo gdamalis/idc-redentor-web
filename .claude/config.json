@@ -167,12 +167,23 @@
     "lockStaleSeconds": 600,
     "updateTimeoutSeconds": 300,
     "staleWarnSeconds": 86400,
-    "updateCommand": "graphify --update",
+    "staleWarnNote": "Code freshness is handled continuously by the git post-commit hook (AST re-extract, no LLM). staleWarnSeconds targets SEMANTIC drift — doc/content/markdown changes that only a full `graphify update` re-extracts. Agents warn past this threshold and Grep to confirm negatives.",
+    "updateCommand": "graphify update",
+    "updateCommandNote": "The CLI takes a SUBCOMMAND + path: `graphify update <root>`. The `graphify --update` flag form is the /graphify SKILL interface, NOT the raw CLI — passing it makes the CLI parse the path as an unknown command and silently error. Always invoke as `<updateCommand> \"<root>\"`.",
     "queryCommand": "graphify query",
+    "verbs": {
+      "query": "graphify query",
+      "affected": "graphify affected",
+      "path": "graphify path",
+      "explain": "graphify explain",
+      "saveResult": "graphify save-result"
+    },
+    "verbsNote": "Match code symbols by their node label INCLUDING parens, e.g. getPage(). query = BFS context for a question (default read path). explain \"X()\" = single-node onboarding: the symbol + neighbours WITH direction (`<-- caller [imports|calls]` is its dependents) — the RELIABLE impact lookup on this graph. path \"A()\" \"B()\" = shortest dependency path (data-flow traces). saveResult = persist a graph-answered Q&A to graphify-out/memory/ so repeat questions get cheaper. affected \"X()\" = reverse-traversal blast-radius, but only works on a DIRECTED graph; this repo's graph is currently undirected (directed:false), so prefer explain. To enable affected, rebuild once with `/graphify --directed` (graphify update preserves directedness).",
     "policy": {
-      "whoRefreshes": "First /work of the session that gets the lock; others read the existing graph.",
-      "whoQueries": "explorer always (when available); implementer only when tracing callers/deps; verifier/qa-runner/pr-author never.",
-      "onFailureFallback": "Proceed with existing graph (or Grep/Read if no graph). Agents include staleness/error notes in their reports."
+      "whoRefreshes": "Continuous: the git post-commit hook (`graphify hook install`) re-extracts changed code on every commit (AST, no LLM cost). Per-session: the first /work that gets the lock additionally runs `graphify update` to catch doc/content (semantic) drift; concurrent sessions read the existing graph.",
+      "whoQueries": "explorer always (query/explain/path when available); implementer for caller/dep + `explain` impact lookups before edits/deletes (confirm negatives with Grep); security-reviewer for `explain` blast-radius on changed shared symbols in the diff; product-manager for reuse lookups; verifier/qa-runner/pr-author never. (`affected` is the dedicated blast-radius verb but needs a directed graph — see verbsNote.)",
+      "onFailureFallback": "Proceed with existing graph (or Grep/Read if no graph). Agents include staleness/error notes in their reports and Grep to confirm any 'not found' negative when the graph may be stale.",
+      "memoryLoop": "After answering a codebase question from the graph, the querying agent runs `graphify save-result --question ... --answer ... --nodes ...` so the next `graphify update` folds the Q&A back into the graph."
     }
   }
 }

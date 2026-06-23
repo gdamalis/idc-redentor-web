@@ -1,0 +1,30 @@
+# --- Keep the shared graphify graph in sync after each commit ---
+# The knowledge graph lives in the MAIN checkout's graphify-out/ and reflects main's tree.
+# `graphify update` extracts from AND writes to the same root (no output redirect), so we
+# resolve the MAIN repo root via the common git dir — this also works from linked /work
+# worktrees, where `git rev-parse --show-toplevel` would point at the worktree (which has no
+# graph) and the refresh would be skipped. AST-only (no LLM/network, ~2s), detached so it
+# never blocks the commit, lock-guarded against races, and a graceful no-op when graphify or
+# the graph is absent (fresh clones, CI, machines that never ran /graphify).
+#
+# Note: a worktree's feature code enters the graph when it merges to main (the graph tracks
+# main, which is also what /work's agents query); doc/content (semantic) drift still needs an
+# occasional `graphify update .` or a /work session update.
+COMMON="$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" || exit 0
+ROOT="$(cd -- "$(dirname -- "$COMMON")" 2>/dev/null && pwd)" || exit 0
+[ -f "$ROOT/graphify-out/graph.json" ] || exit 0
+command -v graphify >/dev/null 2>&1 || exit 0
+
+# Yield to a /work session's own update; serialize concurrent post-commit refreshes via a
+# separate lock with stale reclaim (so a crashed run can't deadlock future refreshes).
+[ -d "$ROOT/graphify-out/.harness-update.lock" ] && exit 0
+LOCK="$ROOT/graphify-out/.post-commit.lock"
+if [ -d "$LOCK" ]; then
+  MTIME="$(stat -f %m "$LOCK" 2>/dev/null || stat -c %Y "$LOCK" 2>/dev/null || echo 0)"
+  [ "$(( $(date +%s) - MTIME ))" -lt 120 ] && exit 0   # a refresh is already in flight
+  rmdir "$LOCK" 2>/dev/null
+fi
+( mkdir "$LOCK" 2>/dev/null || exit 0
+  graphify update "$ROOT" >/dev/null 2>&1
+  rmdir "$LOCK" 2>/dev/null ) >/dev/null 2>&1 &
+exit 0

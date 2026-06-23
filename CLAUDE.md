@@ -26,6 +26,41 @@ It is a **content-managed informational site**, not an app: there is **no authen
 | `pnpm format:check` | Prettier check                                                       |
 | `pnpm prepare`      | Husky install (runs automatically on `pnpm install`)                 |
 
+## graphify (query the graph before you read)
+
+This repo is indexed into a **knowledge graph** at `graphify-out/graph.json` (built by the
+[`graphify`](https://github.com/sponsors/safishamsi) CLI; ~1.7k nodes covering `src/`, `lib/`,
+`docs/`, and the harness). Querying it answers "how does X work / what calls Y / trace Z" from a
+pre-built index — **far cheaper and faster than scanning the tree with Read/Grep/Glob.**
+
+**The rule — every session, not just `/work`:** before you Read/Grep/Glob to answer a _codebase_
+question, if `graphify-out/graph.json` exists, **query the graph first**, then fall back to
+Read/Grep only for what the graph didn't cover. Say which findings came from graphify vs grep.
+
+```bash
+graphify query "trace the /api/contact request flow"      # BFS context for a question (default)
+graphify explain "getPage()"                              # one symbol + its neighbours WITH direction
+                                                          #   (`<-- page.tsx [imports]` = its dependents)
+graphify path "fetchGraphQL()" "ContactForm()"           # shortest dependency path between two nodes
+```
+
+Match code symbols by their node label **including `()`** (e.g. `getPage()`). `graphify affected "X"`
+(blast-radius) needs a **directed** graph; this repo's graph is currently undirected, so use `explain`
+for "what depends on this". To enable `affected`, rebuild once with `/graphify --directed`.
+
+- **Confirm negatives.** A "not found" from the graph may mean stale, not absent — Grep to confirm
+  before acting on it (e.g. before deleting a "no callers" symbol).
+- **Freshness.** The git **post-commit hook** keeps the shared graph (in the main checkout,
+  which the graph tracks) in sync on every commit — AST, no LLM, free, and resolved via the
+  common git dir so it works from `/work` worktrees too. A worktree's feature code enters the
+  graph when it merges to main. For uncommitted edits or _doc/content_ (semantic) changes, run
+  `graphify update .` (also folds in `graphify-out/memory/` Q&A from `graphify save-result`).
+- **Bootstrap.** `graphify-out/` is **gitignored** (per-machine). On a fresh clone it won't exist
+  yet — run `/graphify` once (or `graphify extract .`) to build it; until then, agents fall back to
+  Read/Grep automatically.
+- This mirrors the `explorer` agent's fallback rules so ad-hoc sessions and the `/work` harness
+  navigate the codebase the same way. See `docs/graphify.md` and `docs/agent-harness.md` (§ graphify).
+
 ## Architecture
 
 See `docs/architecture.md` for the full picture. The short version:

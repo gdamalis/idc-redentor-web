@@ -20,6 +20,13 @@ This project is lower-stakes than a payments app: no auth, no RBAC, no payments,
 ## Procedure
 
 1. **Compute the diff**: `git -C <worktreePath> diff --stat origin/main...HEAD`, then `git -C <worktreePath> diff origin/main...HEAD`. Review ONLY changed lines + the minimum surrounding code needed to judge them (Read/Grep for context — e.g. how a changed handler is called).
+   - **Optional blast-radius (when the diff changes a shared symbol/util/service/type):** use graphify to learn what depends on the changed symbol without scanning the whole repo. The graph lives in the **main** repo, not the worktree, so target it explicitly (match the node label with `()`):
+     ```bash
+     MAIN_ROOT="$(dirname "$(git -C <worktreePath> rev-parse --path-format=absolute --git-common-dir)")"
+     GRAPH="$MAIN_ROOT/graphify-out/graph.json"
+     [ -f "$GRAPH" ] && graphify explain "<changedSymbol>()" --graph "$GRAPH"   # `<-- x [imports|calls]` = its dependents
+     ```
+     (`graphify affected "X" --graph "$GRAPH"` is the dedicated reverse-traversal verb but only works on a **directed** graph; this repo's is currently undirected, so `explain` is the reliable dependents lookup.) This stays **diff-anchored**: use the dependents only to judge whether a change's security/perf impact reaches a sensitive consumer — it does NOT expand the review to unrelated code. If the graph is absent or stale, skip it and rely on Grep; never block on graphify.
 2. **Run the security skill** for breadth: invoke the `security-review` skill (Skill tool) scoped to the pending diff, fold its findings in, then add your own focused pass.
 3. **Security checks** (concrete, diff-anchored findings only):
    - injection (NoSQL/Mongo operator injection in `$where` / query objects built from request input, command injection), XSS (raw `dangerouslySetInnerHTML`, unsanitized rich-text rendering in `lib/contentful/rich-text-options.tsx`), SSRF, path traversal, unsafe deserialization, missing/weak input validation at a new request boundary (contact / subscribe / likes API bodies), open redirects, over-broad CORS, hardcoded secrets/tokens/keys, secrets logged to console, PII (email addresses from contact/subscribe forms) logged or echoed.

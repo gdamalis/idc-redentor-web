@@ -53,6 +53,18 @@ Useful query shapes for ticket-context exploration:
 - `"what calls getPage and where is it rendered?"`
 - `"which components consume next-intl translations?"`
 
+Beyond `query`, two verbs are sharper for specific questions (see `config.graphify.verbs`). Match code
+symbols by their **node label including `()`** (e.g. `getPage()`, not `getPage`):
+```bash
+graphify explain "getPage()"                 # one-node onboarding: the symbol + its neighbours WITH
+                                             #   direction — `<-- page.tsx [imports]` shows its callers/importers
+graphify path "fetchGraphQL()" "ContactForm()"  # shortest dependency path between two nodes (data-flow trace)
+```
+`explain` is the reliable way to see what depends on a symbol on this graph; `path` shows how a route
+reaches a service. (`graphify affected "X"` exists for blast-radius but only works on a **directed**
+graph — this repo's graph is currently undirected, so prefer `explain` + Grep for impact. To enable
+`affected`, rebuild once with `/graphify --directed`; `graphify update` then preserves the direction.)
+
 You may run multiple queries in one exploration session — typically 2-5 is enough. Each query is one
 Bash invocation.
 
@@ -65,6 +77,13 @@ Bash invocation.
 
 When you cite findings in your brief, mention which lookups came from graphify vs grep — useful for the
 user to know what the brief is grounded in.
+
+**Feedback loop (when a graphify query genuinely answered a non-trivial question)**: persist it so
+repeat questions get cheaper — the next `graphify update` folds it back into the graph:
+```bash
+graphify save-result --question "<the question>" --answer "<your concise answer>" --nodes <Node1> <Node2>
+```
+Keep it to the 1-2 queries that produced real architectural insight; don't log trivial lookups.
 
 Then explore by area:
 

@@ -94,9 +94,26 @@ If a script is absent at runtime, the verifier/qa-runner **reports it** rather t
 - `tasks/specs/` — implementation specs for non-trivial tickets (read these before implementing).
 - `docs/product/` — the church product brain the `product-manager` loads every run.
 
-## graphify (optional)
+## graphify (codebase knowledge graph)
 
-If a `graphify-out/graph.json` exists at the repo root (`config.graphify.enabled = "auto"` detects it), the explorer queries it for fast codebase navigation; the first `/work` of a session that gets the lock refreshes it. On any failure the agents fall back to Grep/Read and note the staleness. It's an accelerator, not a dependency.
+The repo is indexed into a knowledge graph at `graphify-out/graph.json` (gitignored, per-machine).
+Querying it answers "how does X work / what calls Y / trace Z" from a pre-built index — far cheaper
+than scanning the tree. It's an **accelerator, not a dependency**: every consumer falls back to
+Grep/Read on an empty/stale/absent graph and notes it. Full guide: [`graphify.md`](./graphify.md).
+
+- **Who queries** (`config.graphify.policy.whoQueries`): `explorer` always (query/explain/path);
+  `implementer` for caller/dep + `explain` impact lookups before edits/deletes; `security-reviewer` for
+  `explain` blast-radius on changed shared symbols; `product-manager` for reuse lookups. `verifier`/
+  `qa-runner`/`pr-author` never. Ad-hoc sessions follow the same rule via the `## graphify` section in `CLAUDE.md`.
+- **Who refreshes** (two layers): the **git post-commit hook** (`.husky/post-commit`) keeps the
+  shared graph in sync with `main` on every commit (AST, no LLM, free; resolves the main repo root via
+  the common git dir so it works from worktrees, lock-guarded); `/work` additionally runs
+  `graphify update` once per session (lock-guarded) to catch *doc/content* (semantic) drift.
+  `enabled: "auto"` detects the graph at runtime. A worktree's feature code enters the graph on merge.
+- **Verbs** (`config.graphify.verbs`): `query` (BFS context), `affected` (reverse/blast-radius),
+  `path` (shortest dependency path), `explain` (one-node onboarding), `save-result` (memory loop).
+- **Command form**: the CLI uses a **subcommand** — `graphify update <root>`, never `graphify --update`
+  (that flag form is the `/graphify` skill interface and silently errors on the raw CLI).
 
 ## Golden rules
 

@@ -141,20 +141,24 @@ If `previousFeedback` is set, it is the priority:
 
 ## Tracing callers / dependencies
 
-Prefer Grep/Read. If the orchestrator passes `graphifyAvailable: true`, you MAY use
-`graphify query "what calls <fn>?"` for rename/signature/removal sweeps — but confirm a "no callers
-found" result with Grep before deleting anything. If graphify is absent, just use Grep.
+Prefer Grep/Read. If the orchestrator passes `graphifyAvailable: true`, you MAY use graphify for
+rename/signature/removal sweeps — but **always confirm a "no callers found" result with Grep before
+deleting anything** (the graph can be stale). If graphify is absent, just use Grep.
 
 ```bash
 cd "${mainRepoRoot}"
-graphify query "what calls <functionName>?"
-graphify query "which modules import <path>?"
+graphify explain "<functionName>()"   # PREFERRED for impact: lists neighbours WITH direction —
+                                      #   `<-- caller.tsx [imports|calls]` is who depends on this symbol
+graphify query "how does <area> work?"   # free-form conceptual follow-up
 ```
+Match code symbols by their node label **including `()`** (e.g. `getPage()`). `explain` is the reliable
+impact lookup on this (undirected) graph; `graphify affected "X"` is the dedicated blast-radius verb but
+needs a **directed** graph (rebuild once with `/graphify --directed` to enable it).
 
 Good triggers: renaming/removing a function and you need to update all callers; changing a signature
-and you need the affected sites; removing a util and you want to confirm it's truly unused; touching a
-shared component and you want to know which pages render it. Skip graphify when the plan already
-enumerates the files, you're editing within a single file, or `graphifyAvailable=false`.
+and you need the affected sites; removing a util and you want to confirm it's truly unused (then Grep
+to confirm); touching a shared component and you want to know which pages render it. Skip graphify when
+the plan already enumerates the files, you're editing within a single file, or `graphifyAvailable=false`.
 
 ## Reporting stray observations
 

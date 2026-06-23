@@ -51,10 +51,16 @@ If `config.graphify.enabled` is `false`, set both flags to false and skip this s
 2. If present, attempt the lock + update:
    ```bash
    LOCK="${MAIN_REPO_ROOT}/${graphify.lockDir}"
+   # Portable timeout: stock macOS has no `timeout` (it ships as coreutils' `gtimeout`).
+   # Prefer gtimeout, then timeout; if neither exists run unwrapped — `graphify update`
+   # is AST-only (no LLM) and finishes in seconds, so the missing cap is acceptable.
+   if command -v gtimeout >/dev/null 2>&1; then TIMEOUT="gtimeout ${graphify.updateTimeoutSeconds}s"
+   elif command -v timeout >/dev/null 2>&1; then TIMEOUT="timeout ${graphify.updateTimeoutSeconds}s"
+   else TIMEOUT=""; fi
    if mkdir "$LOCK" 2>/dev/null; then
      echo "$$ $(date +%s)" > "$LOCK/info"
      # We hold the lock — run the update with timeout, then release.
-     timeout ${graphify.updateTimeoutSeconds}s graphify "${MAIN_REPO_ROOT}" --update
+     $TIMEOUT ${graphify.updateCommand} "${MAIN_REPO_ROOT}"   # config.graphify.updateCommand == "graphify update" (subcommand form, NOT `graphify --update`); $TIMEOUT is "" when no timeout binary exists
      rc=$?
      rm -rf "$LOCK"   # the lock dir holds an `info` marker, so rmdir would fail — rm -rf releases it
      if [ $rc -eq 0 ]; then
@@ -71,7 +77,7 @@ If `config.graphify.enabled` is `false`, set both flags to false and skip this s
        # Try again (single retry).
        if mkdir "$LOCK" 2>/dev/null; then
          echo "$$ $(date +%s)" > "$LOCK/info"
-         timeout ${graphify.updateTimeoutSeconds}s graphify "${MAIN_REPO_ROOT}" --update
+         $TIMEOUT ${graphify.updateCommand} "${MAIN_REPO_ROOT}"   # config.graphify.updateCommand == "graphify update" (subcommand form, NOT `graphify --update`); $TIMEOUT is "" when no timeout binary exists
          rm -rf "$LOCK"   # non-empty (holds `info`) — rm -rf, not rmdir
          GRAPHIFY_FRESH=true
        else
@@ -88,6 +94,8 @@ If `config.graphify.enabled` is `false`, set both flags to false and skip this s
 4. When dispatching `explorer` and `implementer` later, pass both `GRAPHIFY_AVAILABLE` and `GRAPHIFY_FRESH` so they don't re-check or refresh themselves.
 
 **Why only here**: the orchestrator updates ONCE per `/work` invocation, holds the lock just long enough to do the incremental extraction, then releases. Concurrent `/work` sessions on other tickets see the lock and use the existing graph — no races, no duplicate LLM cost.
+
+**Relationship to the git post-commit hook**: `graphify hook install` keeps the *code* side of the graph fresh continuously (AST re-extract on every commit, no LLM). This per-session `graphify update` is still worth running because it also re-extracts *doc/content* (semantic) changes the AST hook ignores, and folds in any `graphify save-result` memory entries from prior sessions. So: commits keep code fresh for free; `/work` catches semantic drift once per session.
 
 ## 1. Pull the Trello card
 
