@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, it, expect } from "vitest";
 import {
   parseArgs,
@@ -172,6 +173,15 @@ describe("resolvePublishAction", () => {
         publishFlag: true,
       }),
     ).toBe("publish");
+  });
+  it("promote: draft regardless of source publish state", () => {
+    expect(
+      resolvePublishAction({
+        direction: "promote",
+        sourcePublished: false,
+        publishFlag: false,
+      }),
+    ).toBe("draft");
   });
   it("refresh: mirrors source state", () => {
     expect(

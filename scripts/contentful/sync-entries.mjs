@@ -261,7 +261,20 @@ async function upsertAsset(client, base, source, action) {
   }
   saved = await client.asset.processForAllLocales(base, saved);
   if (action === "publish") {
-    const fresh = await client.asset.get({ ...base, assetId: saved.sys.id });
+    let fresh = await client.asset.get({ ...base, assetId: saved.sys.id });
+    const fileLocales = Object.keys(fresh.fields.file ?? {});
+    const isProcessed = (a) =>
+      fileLocales.length === 0 ||
+      Object.values(a.fields.file ?? {}).every((f) => f?.url);
+    for (let i = 0; i < 30 && !isProcessed(fresh); i += 1) {
+      await new Promise((r) => setTimeout(r, 1000));
+      fresh = await client.asset.get({ ...base, assetId: saved.sys.id });
+    }
+    if (!isProcessed(fresh)) {
+      throw new Error(
+        `asset ${saved.sys.id} did not finish processing in time (30s timeout)`,
+      );
+    }
     await client.asset.publish({ ...base, assetId: saved.sys.id }, fresh);
   }
   return saved;
@@ -492,6 +505,26 @@ async function main() {
   }
 
   // 5. Deletions (opt-in).
+  if (opts.assets) {
+    if (opts.allowDeletes) {
+      for (const a of assetDiff.deleted) {
+        try {
+          if (a.published)
+            await client.asset.unpublish({ ...dst, assetId: a.id });
+          await client.asset.delete({ ...dst, assetId: a.id });
+          counts.deleted += 1;
+          console.log(`  [asset delete] ${a.id}`);
+        } catch (e) {
+          counts.errors += 1;
+          console.error(`  [asset del ERR] ${a.id}: ${e.message}`);
+        }
+      }
+    } else if (assetDiff.deleted.length) {
+      console.log(
+        `\n${assetDiff.deleted.length} assets exist only in target; pass --allow-deletes to remove them.`,
+      );
+    }
+  }
   if (opts.allowDeletes) {
     for (const en of entryDiff.deleted) {
       try {
