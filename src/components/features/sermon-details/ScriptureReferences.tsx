@@ -16,9 +16,8 @@ function formatRef(ref: ScriptureRef, versionLabel: string): string {
 
 export function ScriptureReferences({ refs }: ScriptureReferencesProps) {
   const t = useTranslations("Sermons");
-  // Bible version is shown as a fixed, localized label rather than the stored
-  // per-verse code (e.g. "RVR1960"): es-AR "Nueva versión internacional",
-  // en-US "New International Version".
+  // Bible version is shown as a fixed, localized abbreviation rather than the
+  // stored per-verse code (e.g. "RVR1960"): es-AR "NVI", en-US "NIV".
   const versionLabel = t("bibleVersion");
 
   if (!refs.length) return null;
