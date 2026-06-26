@@ -1,3 +1,9 @@
+# [1.15.0](https://github.com/gdamalis/idc-redentor-web/compare/v1.14.1...v1.15.0) (2026-06-26)
+
+### Features
+
+- **ICR-83:** Contentful workflow v2 — entry-sync, /predica → production, drift detector ([#55](https://github.com/gdamalis/idc-redentor-web/issues/55)) ([6ab25a6](https://github.com/gdamalis/idc-redentor-web/commit/6ab25a69ce59897e8867ec8cd92d3449c8930cc8))
+
 ## [1.14.1](https://github.com/gdamalis/idc-redentor-web/compare/v1.14.0...v1.14.1) (2026-06-26)
 
 ### Bug Fixes
