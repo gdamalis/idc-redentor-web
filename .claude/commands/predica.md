@@ -29,7 +29,7 @@ or auto-skip them. See `tasks/specs/sermon-pipeline.md` §7–§9.
 
 1. Read `.claude/config.json` → pin `config.predica` (audioInbox, artifactsDir, contentfulSpaceId,
    contentfulEnv, defaultContentfulLocale, locales, whatsappLocale, siteBaseUrl, scriptureVersion, whisper,
-   audio, pdf, entryBuilder, agents, gates). Resolve `MAIN_REPO_ROOT` (`git rev-parse --show-toplevel`).
+   audio, pdf, featured, entryBuilder, agents, gates). Resolve `MAIN_REPO_ROOT` (`git rev-parse --show-toplevel`).
 2. Parse `$ARGUMENTS`:
    - `$1` (optional) = audio path. If omitted, pick the **newest** file in `config.predica.audioInbox`
      (`ls -t` filtered to audio extensions). Quote the path (church folders have spaces + accents).
@@ -76,24 +76,31 @@ Then **validate + reconcile** (Bash):
   and update `slugDir`. Re-run the PDF/publisher against the canonical paths.
 - Show the user a one-glance sanity line: title (es/en), thesis, main points, key quotes, scripture refs.
 
-## 4. Generate the branded PDFs — (Card C script)
+## 4. Generate the branded PDFs + featured image — (Card C + featured-image scripts)
 
-Bash: `node <config.predica.pdf.script> <slugDir>/sermon.json` → `predica.es-AR.pdf` + `predica.en-US.pdf` in
-`slugDir`. If it fails for a missing browser, run `pnpm exec playwright install chromium` once and retry.
-Confirm both PDFs exist with non-zero size.
+1. **PDFs.** Bash: `node <config.predica.pdf.script> <slugDir>/sermon.json` → `predica.es-AR.pdf` +
+   `predica.en-US.pdf` in `slugDir`. If it fails for a missing browser, run
+   `pnpm exec playwright install chromium` once and retry. Confirm both PDFs exist with non-zero size.
+2. **Featured image.** Bash: `node <config.predica.featured.script> <slugDir>/sermon.json` → `featured.png`
+   (1200×630) in `slugDir`. This generates an AI background (Google Gemini) themed to the sermon, with the
+   branded title/date overlaid. **It degrades gracefully:** with no `GEMINI_API_KEY` (or on any API failure)
+   it renders an on-brand typographic card instead — the script still exits 0 and writes `featured.png`.
+   Confirm `featured.png` exists with non-zero size. (The image is a **draft default**; the human approves or
+   replaces it at Gate 2.)
 
-> **`--dry-run` stops here.** Print the dry-run summary (transcript, sermon.json, both PDFs, the slug, and the
-> Contentful/WhatsApp actions that WOULD run) and **end** — no Contentful writes, no WhatsApp finalize.
+> **`--dry-run` stops here.** Print the dry-run summary (transcript, sermon.json, both PDFs, `featured.png`,
+> the slug, and the Contentful/WhatsApp actions that WOULD run) and **end** — no Contentful writes, no
+> WhatsApp finalize.
 
 ## 5. Publish the DRAFT — (subagent: `config.predica.agents.publisher`)
 
 Dispatch `predica-publisher` with `slugDir`, `sermon.json`, the canonical `finalSlug`,
 `config.predica.{contentfulSpaceId,contentfulEnv,entryBuilder,assetUploader,entryCreator}`, the two `pdfPaths`,
-and the `audioMp3` path. It uploads the audio + both PDFs (via the CMA scripts), upserts both-locale
-`bibleVerse` refs, links the preacher, and creates the bilingual **DRAFT** `sermon` entry, returning
-`{ entryId, editUrl, finalSlug, assetIds, deferred[], published:false }`. Only `featuredImage` is deferred
-(none is generated; required only on publish). If it reports a slug bump (collision), thread the new
-`finalSlug` forward.
+the `audioMp3` path, and the `featured.png` path. It uploads the audio + both PDFs + the featured image (via the
+CMA scripts), upserts both-locale `bibleVerse` refs, links the preacher, and creates the bilingual **DRAFT**
+`sermon` entry, returning `{ entryId, editUrl, finalSlug, assetIds, deferred[], published:false }`. The
+featured image is attached as a **draft default** (the human can replace it at Gate 2). If it reports a slug
+bump (collision), thread the new `finalSlug` forward.
 
 ## 6. Compose the WhatsApp text — (subagent: `config.predica.agents.whatsapp`)
 
@@ -108,16 +115,17 @@ Print a single summary block and **stop** (no further action):
 - **Transcript:** `<…>/transcript.txt`
 - **sermon.json:** `<…>/sermon.json`
 - **PDFs:** `<…>/predica.es-AR.pdf`, `<…>/predica.en-US.pdf`
-- **Contentful DRAFT (production):** `<editUrl>` — status **draft, not published** (audio + both PDFs
-  already attached)
-- **Deferred media to attach before publishing:** a `featuredImage` (required on publish; none is generated)
+- **Contentful DRAFT (production):** `<editUrl>` — status **draft, not published** (audio + both PDFs +
+  the featured image already attached)
+- **Featured image:** `<…>/featured.png` — generated as a **draft default** (review it; replace in Contentful
+  with a real photo if you prefer)
 - **WhatsApp (es-AR):** `<…>/whatsapp.txt` — canonical URL `<…>` (verify the production domain)
 
 Then tell the user, verbatim intent:
 
-> "Done — everything is a **draft**. To go live: review both locales in Contentful (production), attach a
-> **featuredImage** if deferred, and **Publish** (the publish webhook revalidates the site). Then paste the
-> WhatsApp text. **No agent publishes or sends.**"
+> "Done — everything is a **draft**. To go live: in Contentful (production) review both locales and the
+> **featured image** (replace it if you'd rather use a photo), and **Publish** (the publish webhook
+> revalidates the site). Then paste the WhatsApp text. **No agent publishes or sends.**"
 
 **Never move any Trello card to Done. Never publish. Never send.**
 
