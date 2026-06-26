@@ -2,7 +2,7 @@ import { shouldUseDraftMode } from "@lib/contentful/draftMode";
 import { getFooter } from "@lib/contentful/getFooter";
 import { getNavigationMenu } from "@lib/contentful/getNavigationMenu";
 import { getSingleEmailForm } from "@lib/contentful/getSingleEmailForm";
-import { buildOrganizationJsonLd } from "@lib/metadata";
+import { buildOrganizationJsonLd, DEFAULT_OG_IMAGE } from "@lib/metadata";
 import { ConsentBanner } from "@src/components/shared/consent-banner/ConsentBanner";
 import { Footer } from "@src/components/shared/footer";
 import { JsonLd } from "@src/components/shared/json-ld";
@@ -57,14 +57,7 @@ export const metadata: Metadata = {
   description:
     "Iglesia de Cristo Redentor - Comunidad cristiana reformada en Buenos Aires.",
   openGraph: {
-    images: [
-      {
-        url: "/assets/img/og-default.jpeg",
-        width: 1200,
-        height: 630,
-        alt: "Iglesia de Cristo Redentor",
-      },
-    ],
+    images: [DEFAULT_OG_IMAGE],
   },
   twitter: {
     card: "summary_large_image",

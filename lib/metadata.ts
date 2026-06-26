@@ -39,8 +39,14 @@ interface BuildArticleMetadataOptions {
   path: string;
 }
 
-const DEFAULT_OG_IMAGE = {
-  url: "/assets/img/og-default.jpeg",
+/**
+ * Site-wide default Open Graph / social-card image, used whenever a page or
+ * entry has no image of its own. Single source of truth for the filename — the
+ * asset on disk is `og_default.jpeg` (underscore); referencing this constant
+ * everywhere avoids the recurring `og-default.jpeg` (hyphen) 404.
+ */
+export const DEFAULT_OG_IMAGE = {
+  url: "/assets/img/og_default.jpeg",
   width: 1200,
   height: 630,
   alt: "Iglesia de Cristo Redentor",
@@ -247,7 +253,7 @@ export function buildArticleJsonLd(post: BlogPost, locale: string) {
       name: "Iglesia de Cristo Redentor",
       logo: {
         "@type": "ImageObject",
-        url: `${baseUrl}/assets/img/og-default.jpeg`,
+        url: `${baseUrl}${DEFAULT_OG_IMAGE.url}`,
       },
     },
     mainEntityOfPage: {

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { Sermon } from "@src/types/Sermon";
 import { buildLocaleAlternates } from "@src/i18n/config";
+import { DEFAULT_OG_IMAGE } from "./metadata";
 
 interface BuildSermonMetadataOptions {
   sermon: Sermon;
@@ -32,7 +33,8 @@ export function buildSermonMetadata({
   const pageUrl = `${baseUrl}/${locale}/${path}`;
 
   // featuredImage is optional in Contentful and is often empty on drafts, so
-  // omit the OG/Twitter image rather than dereferencing a missing asset.
+  // fall back to the site-wide default OG image rather than dereferencing a
+  // missing asset (which previously 500'd the live preview).
   const ogImage = sermon.featuredImage
     ? {
         url: sermon.featuredImage.url,
@@ -40,7 +42,7 @@ export function buildSermonMetadata({
         height: 630,
         alt: sermon.featuredImage.title,
       }
-    : undefined;
+    : DEFAULT_OG_IMAGE;
 
   const audioEntry = sermon.audio
     ? { url: sermon.audio.url, type: sermon.audio.contentType }
@@ -53,7 +55,7 @@ export function buildSermonMetadata({
     openGraph: {
       title: sermon.seoTitle,
       description: sermon.seoDescription,
-      ...(ogImage ? { images: [ogImage] } : {}),
+      images: [ogImage],
       url: pageUrl,
       type: "article",
       locale: locale.replace("-", "_"),
@@ -67,7 +69,7 @@ export function buildSermonMetadata({
       card: "summary_large_image",
       title: sermon.seoTitle,
       description: sermon.seoDescription,
-      ...(ogImage ? { images: [ogImage] } : {}),
+      images: [ogImage],
     },
     alternates: {
       canonical: pageUrl,
@@ -103,7 +105,7 @@ export function buildSermonJsonLd(sermon: Sermon, locale: string) {
     "@type": "Article" as const,
     headline: sermon.seoTitle,
     description: sermon.seoDescription,
-    ...(sermon.featuredImage ? { image: sermon.featuredImage.url } : {}),
+    image: sermon.featuredImage?.url ?? `${baseUrl}${DEFAULT_OG_IMAGE.url}`,
     datePublished: sermon.sermonDate,
     dateModified: sermon.sys.publishedAt ?? sermon.sermonDate,
     author: {

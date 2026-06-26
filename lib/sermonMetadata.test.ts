@@ -157,10 +157,18 @@ describe("buildSermonMetadata", () => {
     ).not.toThrow();
   });
 
-  it("omits openGraph.images and twitter.images when featuredImage is absent", () => {
+  it("falls back to the default OG image when featuredImage is absent", () => {
     const meta = buildSermonMetadata({ sermon: SERMON_NO_IMAGE, locale: "es-AR", path: "predicas/la-gracia-de-dios" });
-    expect((meta.openGraph as Record<string, unknown>)?.images).toBeUndefined();
-    expect((meta.twitter as Record<string, unknown>)?.images).toBeUndefined();
+    const ogImages = (meta.openGraph as Record<string, unknown>)?.images as Array<{ url: string }>;
+    const twImages = (meta.twitter as Record<string, unknown>)?.images as Array<{ url: string }>;
+    expect(ogImages?.[0]?.url).toContain("og_default.jpeg");
+    expect(twImages?.[0]?.url).toContain("og_default.jpeg");
+  });
+
+  it("uses the sermon's featuredImage for OG when present", () => {
+    const meta = buildSermonMetadata({ sermon: FULL_SERMON, locale: "es-AR", path: "predicas/la-gracia-de-dios" });
+    const ogImages = (meta.openGraph as Record<string, unknown>)?.images as Array<{ url: string }>;
+    expect(ogImages?.[0]?.url).toBe("https://images.ctfassets.net/hero.jpg");
   });
 });
 
@@ -256,11 +264,11 @@ describe("buildSermonJsonLd", () => {
     expect(ld.citation).toBeUndefined();
   });
 
-  it("does not throw and omits image when featuredImage is absent (draft preview)", () => {
+  it("does not throw and falls back to the default OG image when featuredImage is absent (draft preview)", () => {
     let ld: ReturnType<typeof buildSermonJsonLd> | undefined;
     expect(() => {
       ld = buildSermonJsonLd(SERMON_NO_IMAGE, "es-AR");
     }).not.toThrow();
-    expect(ld?.image).toBeUndefined();
+    expect(ld?.image).toBe(`${BASE_URL}/assets/img/og_default.jpeg`);
   });
 });
