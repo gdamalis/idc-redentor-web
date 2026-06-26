@@ -377,7 +377,7 @@
     "contentfulSpaceId": "vg9le24yw8hb",
     "contentfulEnv": "production",
     "contentfulProtectedEnv": "master",
-    "contentfulEnvNote": "The publisher creates the sermon as a DRAFT in `production` (the live env behind the master alias) via the two committed CMA scripts — it has NO publish call, so nothing goes live until a human reviews both locales and clicks Publish at Gate 2. The scripts refuse the `master` ALIAS by name (you write the `production` ENV, never the alias). The MCP server runs PROTECTED_ENVIRONMENTS=master,production as a backstop, which does not affect these scripts (they use the management token directly, not the MCP).",
+    "contentfulEnvNote": "The publisher creates (or, on a regenerate, updates in place) the sermon as a DRAFT in `production` (the live env behind the master alias) via the committed CMA scripts — none has a publish call, so nothing goes live until a human reviews both locales and clicks Publish at Gate 2. The scripts refuse the `master` ALIAS by name (you write the `production` ENV, never the alias). The MCP server runs PROTECTED_ENVIRONMENTS=master,production as a backstop, which does not affect these scripts (they use the management token directly, not the MCP).",
     "defaultContentfulLocale": "es-AR",
     "locales": ["es-AR", "en-US"],
     "defaultLocale": "es-AR",
@@ -423,7 +423,8 @@
     "entryBuilderNote": "Deterministic builder: turns sermon.json (+ resolved link ids) into the exact Contentful `fields` payloads (bibleVerse + sermon), incl. localized wrapping and rich-text from content blocks. Canonical typed impl + tests: src/utils/predica/sermonEntry.ts. The publisher feeds these fields to entryCreator (below).",
     "assetUploader": ".claude/scripts/predica/upload-contentful-asset.mjs",
     "entryCreator": ".claude/scripts/predica/create-contentful-entry.mjs",
-    "writePathNote": "All Contentful WRITES go through these two CMA scripts (binary-upload + create-entry), NOT the MCP write tools — reliable at any size (a ~20MB mp3, a 50KB+ rich-text entry) where MCP base64 / LLM round-trip is infeasible. Both scripts are DRAFT-ONLY (no publish call) and HARD-REFUSE the master environment; they read CONTENTFUL_MANAGEMENT_ACCESS_TOKEN from env/.env.local (name only, never printed). The publisher's MCP allowlist is READ-ONLY, so it structurally cannot publish or touch master by any path.",
+    "entryDeleter": ".claude/scripts/predica/delete-contentful.mjs",
+    "writePathNote": "All Contentful WRITES go through these THREE CMA scripts (binary-upload + create/update-entry + delete), NOT the MCP write tools — reliable at any size (a ~20MB mp3, a 50KB+ rich-text entry) where MCP base64 / LLM round-trip is infeasible. create-contentful-entry.mjs creates a draft OR updates one in place (--id <entryId>, full-fields replace, used when /predica regenerates an existing sermon). delete-contentful.mjs is the ONLY delete path (unpublish-then-delete by explicit id; --guard-referenced refuses to delete a bibleVerse still linked by another sermon/the Creed). All three are DRAFT-ONLY (no publish call) and HARD-REFUSE the master environment; they read CONTENTFUL_MANAGEMENT_ACCESS_TOKEN from env/.env.local (name only, never printed). The publisher's MCP allowlist is READ-ONLY, so it structurally cannot publish or touch master by any path.",
     "assetUploadPolicy": {
       "uploadedViaCma": ["audio", "pdfSummary", "featuredImage"],
       "deferToHumanAtGate2": [],
@@ -457,7 +458,7 @@
       "enabled": false,
       "collection": "sermons",
       "db": "website",
-      "note": "Optional idempotency/resume via a `sermons` collection { sourceFile, slug, status, contentfulEntryId, updatedAt }. Deferred in V1 (spec §7.1); re-runs are instead guarded by the publisher's slug-collision check (search_entries before create, append -2/-3)."
+      "note": "A Mongo `sermons` audit collection is NOT used. Re-run idempotency is handled without extra infra: (1) pre-flight matches the recording's sourceSha256 against tasks/predicas/*/ to reuse a corrected transcript (skip transcription + Gate 1); (2) Gate 0 looks the sermon up in Contentful by canonical slug (+ sermonDate) and, on human approval, UPDATES the existing entry in place (create-contentful-entry.mjs --id) instead of creating a `-2` duplicate, then cleans up superseded assets + orphaned legacy verses via delete-contentful.mjs. Bible verses dedup site-wide by scripture coordinate (book+chapter+verse-range), reused across sermons + the Creed; never the old per-sermon internalName key."
     }
   }
 }

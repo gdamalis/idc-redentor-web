@@ -214,5 +214,6 @@ A human always merges the PR and closes the card (moves it to **Done**). Scratch
   - `seo-and-metadata.md` — `lib/metadata.ts`, the Contentful `Seo` type, OG/Twitter cards, JSON-LD, locale alternates.
   - `agent-harness.md` — how to use the agents and commands; the human-gated Trello automation.
   - `predica-bibleverse-reuse.md` — how `/predica` dedups scripture: the derived, version-scoped `bibleVerse` `internalName` (`"Joel 2:13 (NVI)"`) + the `--upsert-by-internal-name` CMA flag; cross-sermon reuse + sermon re-run safety.
+  - `predica-rerun-idempotency.md` — re-running `/predica` safely: pre-flight transcript reuse by audio hash, **Gate 0** existing-sermon detection, regenerate by **update-in-place** (`--id`) instead of duplicating, and the guarded `delete-contentful.mjs` cleanup of superseded assets + orphaned legacy verses.
   - `contributing.md` — branch/commit/PR conventions, semantic-release, husky/CI gates, the worktree flow.
   - `gtm-ga4-setup.md` — _(existing)_ GTM/GA4 analytics + consent setup.

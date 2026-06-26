@@ -43,18 +43,32 @@ or auto-skip them. See `tasks/specs/sermon-pipeline.md` §7–§9.
    browser). Stop with a precise message if a hard dependency is missing.
 4. **Contentful env check** (skip on `--dry-run`). `mcp__contentful__list_environments(spaceId)` and confirm
    `config.predica.contentfulEnv` (`production`) exists and is accessible.
-5. **Provisional slug + artifacts dir.** Derive a provisional slug from the filename (transliterate, lowercase,
-   dash-collapse) — used only for the temp dir. `mkdir -p <artifactsDir>/<provisional-slug>/`. (The writer's
-   title-derived slug is canonical; reconcile in step 3.)
+5. **Transcript reuse vs. fresh dir.** Compute `audioSha256 = shasum -a 256 "<audioPath>"` (leading hex digest).
+   Scan prior runs — for each `<artifactsDir>/*/`, compare `audioSha256` to that dir's
+   `links.json.sourceSha256` (else `shasum -a 256` its `source.*`).
+   - **Match + a non-empty `transcript.txt`** → this exact recording was already transcribed (and corrected).
+     Set `slugDir` to that dir, `reuseTranscript = true`, `audioMp3 = <slugDir>/audio.mp3` (transcode it from
+     `source.*` with ffmpeg if missing), and resolve `durationSeconds` from that dir's `sermon.json` (else
+     `ffprobe`). You will **skip step 1 (transcribe) and Gate 1** — tell the user you are reusing their
+     corrected transcript, only regenerating the downstream content (title, summaries, scripture, PDFs,
+     featured image, draft).
+   - **No match** (a new recording, or a *different* file for the same Sunday → treat as fresh) →
+     `reuseTranscript = false`. Derive a provisional slug from the filename (transliterate, lowercase,
+     dash-collapse) and `mkdir -p <artifactsDir>/<provisional-slug>/` (temp dir; the writer's title-derived
+     slug is canonical — reconcile in step 3). Run steps 1–2 normally.
 
-## 1. Transcribe — (subagent: `config.predica.agents.transcriber`)
+## 1. Transcribe — (subagent: `config.predica.agents.transcriber`) — *skip when `reuseTranscript`*
 
-Dispatch `predica-transcriber` with `audioPath`, `slugDir`, and `config.predica.{whisper,audio}`. It returns
-`{ durationSeconds, transcriptTxt, audioMp3, archive, … }`. Surface the transcript path and duration.
+If `reuseTranscript` (pre-flight step 5), **skip this step entirely** — the corrected transcript already
+exists in `slugDir`. Otherwise dispatch `predica-transcriber` with `audioPath`, `slugDir`, and
+`config.predica.{whisper,audio}`. It returns `{ durationSeconds, transcriptTxt, audioMp3, archive,
+sourceSha256, … }`. Surface the transcript path and duration; keep `sourceSha256` to record in `links.json`.
 
-## 2. ★ HUMAN GATE 1 — correct the transcript ★
+## 2. ★ HUMAN GATE 1 — correct the transcript ★ — *skip when `reuseTranscript`*
 
-Print the absolute path to `transcript.txt` and ask the user **explicitly**:
+If `reuseTranscript`, **skip this gate** — the human already corrected this transcript on the prior run (the
+recording is byte-identical). Otherwise print the absolute path to `transcript.txt` and ask the user
+**explicitly**:
 
 > "Transcript ready at `<…>/transcript.txt` (`<mm:ss>`). Please review and correct it in place — names,
 > scripture references, and any theology — then tell me to continue. I'll wait."
@@ -76,6 +90,32 @@ Then **validate + reconcile** (Bash):
   and update `slugDir`. Re-run the PDF/publisher against the canonical paths.
 - Show the user a one-glance sanity line: title (es/en), thesis, main points, key quotes, scripture refs.
 
+## 3.5 ★ HUMAN GATE 0 — already in Contentful? (regenerate-in-place) ★
+
+Now that the **canonical slug** exists, check whether this sermon was already published as a draft/entry —
+**before** any Contentful write. Skip entirely on `--dry-run`. Reads only (`environmentId: "production"`):
+
+1. **Look it up.** `mcp__contentful__search_entries({ content_type:"sermon", "fields.slug": finalSlug, limit:5, environmentId:"production" })`. Also catch **slug drift + earlier buggy `-N` duplicates**: search by
+   `fields.sermonDate == sermonDate` and list any sermon whose slug is `finalSlug` or matches `^finalSlug-\d+$`.
+2. **None found** → set `mode = "create"`, `replaceFeatured = true`; proceed to step 4. (The normal first-run path.)
+3. **Found** → `get_entry` each hit to read its status (published iff `sys.publishedVersion` is set) and its
+   `featuredImage` asset; build the editUrl(s). Then **stop and ask the human** (this gate stays in the
+   conversation — never delegated, never auto-skipped):
+
+   > "This sermon already exists in Contentful (`<editUrl>`, status **<draft|PUBLISHED>**[, plus N duplicates]).
+   > Regenerating will **update that entry in place** (same id/URL) and replace its audio + both PDFs. Any edits
+   > you made at Gate 2 — corrected text, a replaced featured photo, the publish — **will be overwritten**
+   > (if it was published, you'll need to **Publish again** to push the new content live). Proceed?
+   > And the **featured image**: regenerate it, or keep the one currently on the entry?"
+
+   - **Proceed** → `mode = "update"`, `entryId = <the chosen entry>`. Set `replaceFeatured` from the answer
+     (default regenerate; `false` keeps the entry's current image). If the human flags duplicates for cleanup,
+     collect those `-N` entry ids to delete after the update succeeds (via `config.predica.entryDeleter`).
+   - **Decline** → **stop**; make no Contentful writes. Leave all local artifacts in `slugDir`.
+   - **Featured-image safety:** if the entry's current `featuredImage` is human-replaced (asset filename ≠
+     `featured.png`, or the asset is published), state that explicitly in the prompt and **default to keeping
+     it** (`replaceFeatured = false`) unless the human says regenerate.
+
 ## 4. Generate the branded PDFs + featured image — (Card C + featured-image scripts)
 
 1. **PDFs.** Bash: `node <config.predica.pdf.script> <slugDir>/sermon.json` → `predica.es-AR.pdf` +
@@ -94,13 +134,18 @@ Then **validate + reconcile** (Bash):
 
 ## 5. Publish the DRAFT — (subagent: `config.predica.agents.publisher`)
 
-Dispatch `predica-publisher` with `slugDir`, `sermon.json`, the canonical `finalSlug`,
-`config.predica.{contentfulSpaceId,contentfulEnv,entryBuilder,assetUploader,entryCreator}`, the two `pdfPaths`,
-the `audioMp3` path, and the `featured.png` path. It uploads the audio + both PDFs + the featured image (via the
-CMA scripts), upserts both-locale `bibleVerse` refs, links the preacher, and creates the bilingual **DRAFT**
-`sermon` entry, returning `{ entryId, editUrl, finalSlug, assetIds, deferred[], published:false }`. The
-featured image is attached as a **draft default** (the human can replace it at Gate 2). If it reports a slug
-bump (collision), thread the new `finalSlug` forward.
+Dispatch `predica-publisher` with `slugDir`, `sermon.json`, the canonical `finalSlug`, the Gate-0
+`mode` (`"create"` | `"update"`) and (on update) `entryId` + `replaceFeatured`, the `sourceSha256`,
+`config.predica.{contentfulSpaceId,contentfulEnv,entryBuilder,assetUploader,entryCreator,entryDeleter}`, the
+two `pdfPaths`, the `audioMp3` path, and the `featured.png` path. It uploads the audio + both PDFs (+ the
+featured image unless the human kept theirs), **upserts** both-locale `bibleVerse` refs by their derived
+version-scoped key (reused site-wide — same passage → one shared entry), links the preacher, and **creates**
+the bilingual **DRAFT** `sermon` entry or **updates
+the existing one in place** — returning `{ mode, updated, entryId, editUrl, finalSlug, assetIds, bibleVerseIds,
+cleanedUp, published:false }`. On update it also deletes the superseded old assets and any orphaned legacy
+verses (never a shared verse). There is **no slug bumping** — Gate 0 already resolved create-vs-update, so the
+`finalSlug` is fixed. If Gate 0 flagged `-N` duplicates for cleanup, delete those entries now via
+`node <config.predica.entryDeleter> --space <s> --env <e> --entry-id <…>` after confirming the update succeeded.
 
 ## 6. Compose the WhatsApp text — (subagent: `config.predica.agents.whatsapp`)
 
@@ -115,8 +160,10 @@ Print a single summary block and **stop** (no further action):
 - **Transcript:** `<…>/transcript.txt`
 - **sermon.json:** `<…>/sermon.json`
 - **PDFs:** `<…>/predica.es-AR.pdf`, `<…>/predica.en-US.pdf`
-- **Contentful DRAFT (production):** `<editUrl>` — status **draft, not published** (audio + both PDFs +
-  the featured image already attached)
+- **Contentful (production):** `<editUrl>` — **created as a draft** (first run) **or updated in place**
+  (regenerate: same id/URL). If it was **already published**, the live page keeps showing the OLD content
+  until you **Publish again**. (Audio + both PDFs + the featured image are attached.) If a regenerate cleaned
+  up duplicates or legacy verses, that is listed below.
 - **Featured image:** `<…>/featured.png` — generated as a **draft default** (review it; replace in Contentful
   with a real photo if you prefer)
 - **WhatsApp (es-AR):** `<…>/whatsapp.txt` — canonical URL `<…>` (verify the production domain)
@@ -132,6 +179,9 @@ Then tell the user, verbatim intent:
 ## Failure handling
 
 If any subagent or script fails, stop at that step, surface the exact error (failing command + stderr / the
-agent's `{ ok:false, error }`), and leave all artifacts in `slugDir` for inspection. Re-running `/predica` on
-the same audio resumes cleanly: ffmpeg uses `-y`, the slug-collision check prevents duplicate entries, and the
-artifacts dir is reused. Cap any auto-retry at **2 attempts** per step, then hand back to the human.
+agent's `{ ok:false, error }`), and leave all artifacts in `slugDir` for inspection. **Re-running `/predica`
+on the same audio is safe and idempotent:** pre-flight matches the recording's `sourceSha256` and reuses the
+corrected transcript (skipping transcription + Gate 1); **Gate 0** detects the existing Contentful sermon by
+slug and, on your approval, **updates it in place** (same id) rather than creating a `-2` duplicate, replacing
+its assets and cleaning up orphaned legacy verses. Cap any auto-retry at **2 attempts** per step, then hand
+back to the human.

@@ -22,6 +22,9 @@ network, no Contentful, no publishing. Everything you write lands inside the per
 
 1. **Pre-flight.** Confirm `audioPath` exists and that `ffmpeg`, `ffprobe`, and `whisper.bin` + `whisper.model`
    all exist. If any is missing, fail with a precise message (exit non-zero).
+   **Never clobber a corrected transcript:** if `<slugDir>/transcript.txt` already exists and is non-empty,
+   STOP and return `{ ok:false, error:"transcript.txt already exists — reuse it (the orchestrator decides reuse in pre-flight); do not re-transcribe" }`. The orchestrator only dispatches you when there is no
+   reusable transcript, so an existing one means a corrected transcript would be overwritten.
 2. **Duration.** `ffprobe -v error -show_entries format=duration -of csv=p=0 "<audioPath>"` → round to an
    integer `durationSeconds`.
 3. **Throwaway WAV for whisper.** `ffmpeg -y -i "<audioPath>" -ar <wavSampleRate> -ac <wavChannels> -c:a pcm_s16le "<slugDir>/transcribe.wav"`.
@@ -31,8 +34,11 @@ network, no Contentful, no publishing. Everything you write lands inside the per
 5. **Web audio.** Transcode the **source** (not the WAV) to a browser-universal file:
    `ffmpeg -y -i "<audioPath>" -c:a <audio.webCodec> -b:a <audio.webBitrate> "<slugDir>/audio.<audio.webFormat>"`.
 6. **Archive the original.** Copy (never move/modify) the source into the dir: `cp "<audioPath>" "<slugDir>/source<ext>"`.
-7. **Clean up** the throwaway `transcribe.wav` (`rm -f`) — it is large and only needed for whisper.
-8. Sanity-check `transcript.txt` is non-empty and `audio.<webFormat>` exists with non-zero size.
+7. **Source hash.** `shasum -a 256 "<audioPath>"` → take the leading hex digest as `sourceSha256`. This is the
+   identity of the recording: a future `/predica` on the same file matches it (pre-flight) to reuse this
+   transcript and skip Gate 1; a different file for the same Sunday won't match and is treated as fresh.
+8. **Clean up** the throwaway `transcribe.wav` (`rm -f`) — it is large and only needed for whisper.
+9. Sanity-check `transcript.txt` is non-empty and `audio.<webFormat>` exists with non-zero size.
 
 ## Hard rules
 
@@ -55,6 +61,7 @@ Return **only** a single JSON object (no prose) the orchestrator can parse:
   "audioMp3": "<abs path>/audio.mp3",
   "audioMp3SizeBytes": 19876543,
   "archive": "<abs path>/source.m4a",
+  "sourceSha256": "<64-hex sha256 of the source recording>",
   "transcriptChars": 18234,
   "warnings": []
 }

@@ -17,8 +17,15 @@
  * writing; otherwise it creates as normal (`reused:false`). Deterministic — it does
  * not depend on the agent remembering to search. See docs/predica-bibleverse-reuse.md.
  *
- * DRAFT-ONLY by construction:
- *   - It has NO publish call. It creates a draft entry and stops.
+ * UPDATE-IN-PLACE (--id <entryId>): instead of creating, GET the entry's current
+ * version and PUT the full `fields` payload back under the SAME id. Used when
+ * /predica regenerates an existing sermon (Gate 0 → update, not duplicate): the
+ * editUrl is stable and PUT fully replaces `fields`, so the regenerated content
+ * supersedes the prior content. `--content-type` is optional with `--id` (the entry
+ * already has a type). Still no publish call.
+ *
+ * DRAFT-ONLY by construction (every mode):
+ *   - It has NO publish call. It creates/updates a draft entry and stops.
  *   - It HARD-REFUSES the `master` alias (and any `master*` env). It writes the
  *     `production` ENV directly; a human reviews + Publishes at Gate 2.
  *
@@ -29,9 +36,11 @@
  *   node .claude/scripts/predica/create-contentful-entry.mjs \
  *     --content-type <contentTypeId> --fields <fields.json> --space <spaceId> --env <environmentId> \
  *     [--upsert-by-internal-name]
+ *   node .claude/scripts/predica/create-contentful-entry.mjs \
+ *     --id <entryId> --fields <fields.json> --space <spaceId> --env <environmentId>   # update in place
  *
- * Output (stdout): { "ok": true, "entryId": "...", "editUrl": "...", "reused": <bool> }
- * Exit codes: 0 success · 2 usage/auth/guard error · 1 create failure
+ * Output (stdout): { "ok": true, "entryId": "...", "editUrl": "...", "reused"?: <bool>, "updated"?: true }
+ * Exit codes: 0 success · 2 usage/auth/guard error · 1 create/update failure
  */
 
 import { readFile } from "node:fs/promises";
@@ -88,8 +97,13 @@ async function loadToken() {
 
 async function main() {
   const a = parseArgs(process.argv.slice(2));
-  for (const r of ["content-type", "fields", "space", "env"]) {
+  const isUpdate = Boolean(a.id) && a.id !== true; // --id <entryId>
+  for (const r of ["fields", "space", "env"]) {
     if (!a[r]) die(2, `error: --${r} is required`);
+  }
+  // --content-type is required to CREATE/upsert; with --id the entry already has a type.
+  if (!isUpdate && !a["content-type"]) {
+    die(2, "error: --content-type is required (pass --id <entryId> to update in place)");
   }
   if (a.env === "master" || /^master(-|$)/.test(a.env)) {
     die(
@@ -111,6 +125,34 @@ async function main() {
   const url = `${CMA}/spaces/${a.space}/environments/${a.env}/entries`;
   const editUrlFor = (id) =>
     `https://app.contentful.com/spaces/${a.space}/environments/${a.env}/entries/${id}`;
+
+  // Update-in-place: GET the entry's current version, then PUT the full fields back
+  // under the same id. No publish call; PUT fully replaces `fields`.
+  if (isUpdate) {
+    try {
+      const getRes = await fetch(`${url}/${a.id}`, { headers: { Authorization: `Bearer ${token}` } });
+      const getText = await getRes.text();
+      if (!getRes.ok) throw new Error(`GET entries/${a.id} → ${getRes.status} ${getRes.statusText}\n${getText}`);
+      const version = JSON.parse(getText)?.sys?.version;
+      if (version == null) throw new Error(`entry ${a.id} returned no sys.version`);
+      const putRes = await fetch(`${url}/${a.id}`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": JSON_CT,
+          "X-Contentful-Version": String(version),
+        },
+        body: JSON.stringify({ fields }),
+      });
+      const putText = await putRes.text();
+      if (!putRes.ok) throw new Error(`PUT entries/${a.id} → ${putRes.status} ${putRes.statusText}\n${putText}`);
+      const entryId = JSON.parse(putText)?.sys?.id ?? a.id;
+      process.stdout.write(JSON.stringify({ ok: true, entryId, editUrl: editUrlFor(entryId), updated: true }) + "\n");
+      return;
+    } catch (e) {
+      die(1, `error: ${e.message}`);
+    }
+  }
 
   // Idempotent upsert: reuse an existing entry with the same internalName instead of
   // creating a duplicate. Read-only lookup; if no match, fall through to the create.

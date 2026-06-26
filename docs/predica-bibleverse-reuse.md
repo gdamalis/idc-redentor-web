@@ -43,14 +43,12 @@ the `master` alias**. The publisher's MCP allowlist remains **read-only**.
 
 ## Re-run safety for the sermon entry
 
-The same passage is reused, but the **sermon** entry must not silently duplicate either. On a slug collision
-the publisher (step 2):
-
-- **Existing same-slug DRAFT** (no `sys.publishedVersion` — Contentful's canonical "never published"
-  marker; not `publishedCounter`) → **abort with guidance** (delete the stale draft, then re-run). It does
-  **not** bump to `<slug>-2`.
-- **Existing same-slug PUBLISHED** (`sys.publishedVersion` present) → treat as a new edition and bump (`-2`,
-  `-3`, …).
+The same passage is reused, but the **sermon** entry must not silently duplicate either. This is handled by
+the re-run idempotency layer (full detail in [`predica-rerun-idempotency.md`](./predica-rerun-idempotency.md)):
+a **★ Gate 0 ★** in the orchestrator detects an existing sermon by slug (keying "published" on the presence
+of `sys.publishedVersion` — never `publishedCounter`) and, on human approval, **regenerates it by
+update-in-place** (`create-contentful-entry.mjs --id`, same id) instead of creating a `<slug>-2` duplicate.
+The publisher never bumps the slug; on an unexpected create-mode collision it aborts rather than duplicate.
 
 ## Files
 
