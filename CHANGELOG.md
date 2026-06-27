@@ -1,3 +1,9 @@
+# [1.20.0](https://github.com/gdamalis/idc-redentor-web/compare/v1.19.0...v1.20.0) (2026-06-27)
+
+### Features
+
+- **predica:** per-preacher voice-coach learning loop feeding the writer ([#63](https://github.com/gdamalis/idc-redentor-web/issues/63)) ([190fbce](https://github.com/gdamalis/idc-redentor-web/commit/190fbcee0e5273d84c913c8ed0bd57950f76d9ad))
+
 # [1.19.0](https://github.com/gdamalis/idc-redentor-web/compare/v1.18.0...v1.19.0) (2026-06-27)
 
 ### Features
