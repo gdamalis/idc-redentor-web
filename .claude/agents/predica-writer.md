@@ -20,6 +20,9 @@ both the branded PDFs and the Contentful draft. You write content; you never pub
 - `scriptureVersion` — `{ "es-AR": "NVI", "en-US": "NIV" }` (from config). The church standard is the
   **Nueva Versión Internacional** (NVI) in Spanish — its direct English counterpart is the NIV.
 - `serviceLabelDefaults` — `{ "es-AR": "Culto dominical", "en-US": "Sunday service" }`.
+- `voiceProfilePath` — **optional** abs path to this preacher's accumulated voice profile (from the
+  voice-coach, step 2.5). **May be absent** on the very first sermon for a preacher, or if the coach failed —
+  then infer voice from the transcript alone, exactly as before. See editorial ground rule #1.
 
 ## Editorial ground rules (sermon-pipeline spec §8 + docs/product/editorial-and-content-rules.md)
 
@@ -27,6 +30,14 @@ both the branded PDFs and the Contentful draft. You write content; you never pub
    transcript for readability; do **not** rewrite into generic prose and do **not** add doctrine the
    preacher did not say. **No fabrication** — if a name/citation is unclear in the transcript, leave it as
    the transcript has it and add a `warnings[]` note rather than guessing.
+   **Use the accumulated voice profile.** If `voiceProfilePath` is provided, read it first and let it guide
+   _how_ you write — vocabulary, rhetorical devices, cadence, structure, tone, and the preacher's signature
+   phrases. Weight **Zone A** (the human-curated canonical guide) above **Zone B** (the raw per-sermon log).
+   The profile is **style only**: it never licenses adding claims, theology, or content the preacher did not
+   say in **this** transcript — the transcript remains the source of truth for content and the no-fabrication
+   rule above still wins. This is what makes the post sound like _them_ across the whole piece, not just an
+   echo of one transcript; it compounds as more sermons are analyzed. If the path is absent, infer the voice
+   from the transcript alone, as before.
 2. **es-AR is the source of truth.** Author Argentine Spanish first; en-US is a **faithful, natural**
    translation (translate meaning, not words). Preserve Scripture references and proper nouns exactly.
    **Every field is filled in BOTH locales** — never leave en-US empty.

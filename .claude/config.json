@@ -432,9 +432,24 @@
     },
     "agents": {
       "transcriber": "predica-transcriber",
+      "voiceCoach": "predica-voice-coach",
       "writer": "predica-writer",
       "publisher": "predica-publisher",
       "whatsapp": "predica-whatsapp"
+    },
+    "voices": {
+      "dir": "tasks/predicas/_voices",
+      "file": "tasks/predicas/_voices/<preacher-slug>.md",
+      "note": "Local-only (gitignored) per-preacher voice profiles, one <preacher-slug>.md per preacher (slug derived from the preacher full name with the same transliterate->lowercase->dash-collapse rule as the title slug). TWO ZONES: Zone A = human-curated canonical voice guide (seeded once by the coach on first creation, NEVER auto-overwritten thereafter; the coach only appends to its fenced '🤖 Refinamientos sugeridos' list, which the human promotes by hand); Zone B = machine append-only dated observation log, one concise entry per sermon keyed by sermonDate (idempotent — a transcript-reuse re-run never double-appends). SOURCE OF LEARNING = the corrected transcript.txt ONLY, never the generated sermon.json (avoids a model-style feedback loop). PRIVATE BY DESIGN: the repo is PUBLIC and all sermon-derived content already stays out of git (.gitignore: tasks/predicas/), so these profiles live in that same private tier; in-file dated history replaces git history. STYLE, not doctrine — describes HOW the preacher communicates, never WHAT they assert. See docs/predica-voice-profiles.md."
+    },
+    "voiceCoach": {
+      "agent": "predica-voice-coach",
+      "after": "transcriptReview",
+      "before": "write",
+      "blocking": false,
+      "blockingNote": "Step 2.5 — runs between Gate 1 (corrected transcript) and the writer so each sermon's authentic voice is captured BEFORE that sermon is written and the writer benefits immediately. NON-BLOCKING + RESILIENT: on {ok:false} or any error the orchestrator prints a warning and CONTINUES (the writer falls back to today's transcript-only voice inference). Additive — it can never break publishing. Runs on transcript-reuse (self-skips via the date idempotency check) and on --dry-run (local-only, improves the writing).",
+      "source": "corrected transcript only (NEVER the run's generated sermon.json)",
+      "model": "opus"
     },
     "gates": {
       "transcriptReview": {

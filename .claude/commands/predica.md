@@ -29,7 +29,7 @@ or auto-skip them. See `tasks/specs/sermon-pipeline.md` §7–§9.
 
 1. Read `.claude/config.json` → pin `config.predica` (audioInbox, artifactsDir, contentfulSpaceId,
    contentfulEnv, defaultContentfulLocale, locales, whatsappLocale, siteBaseUrl, scriptureVersion, whisper,
-   audio, pdf, featured, entryBuilder, agents, gates). Resolve `MAIN_REPO_ROOT` (`git rev-parse --show-toplevel`).
+   audio, pdf, featured, entryBuilder, agents, voices, voiceCoach, gates). Resolve `MAIN_REPO_ROOT` (`git rev-parse --show-toplevel`).
 2. Parse `$ARGUMENTS`:
    - `$1` (optional) = audio path. If omitted, pick the **newest** file in `config.predica.audioInbox`
      (`ls -t` filtered to audio extensions). Quote the path (church folders have spaces + accents).
@@ -38,6 +38,11 @@ or auto-skip them. See `tasks/specs/sermon-pipeline.md` §7–§9.
      mtime date and note the assumption.
    - Resolve `preacher`: parse the filename (e.g. `… - Prédica - Jonathan.m4a` → `Jonathan …`); if only a
      first name, leave it for the writer/publisher to match against an existing `author` and note it.
+   - Resolve `preacherSlug` from `preacher` with the **same** transliterate→lowercase→dash-collapse rule the
+     writer uses for the title slug (`Jonathan Hanegan` → `jonathan-hanegan`). Set
+     `voiceProfilePath = <artifactsDir>/_voices/<preacherSlug>.md` and `mkdir -p <artifactsDir>/_voices`
+     (gitignored). If `preacher` is first-name-only, note that this slug may differ from a later full-name
+     run (the human can rename/merge the profile file — it's low volume).
 3. **Tooling check** (Bash): `ffmpeg`, `ffprobe`, `config.predica.whisper.bin` + `.model` all exist; and
    Chromium for the PDF (`pnpm exec playwright install chromium` if `renderPdfs` later errors with a missing
    browser). Stop with a precise message if a hard dependency is missing.
@@ -52,19 +57,19 @@ or auto-skip them. See `tasks/specs/sermon-pipeline.md` §7–§9.
      `ffprobe`). You will **skip step 1 (transcribe) and Gate 1** — tell the user you are reusing their
      corrected transcript, only regenerating the downstream content (title, summaries, scripture, PDFs,
      featured image, draft).
-   - **No match** (a new recording, or a *different* file for the same Sunday → treat as fresh) →
+   - **No match** (a new recording, or a _different_ file for the same Sunday → treat as fresh) →
      `reuseTranscript = false`. Derive a provisional slug from the filename (transliterate, lowercase,
      dash-collapse) and `mkdir -p <artifactsDir>/<provisional-slug>/` (temp dir; the writer's title-derived
      slug is canonical — reconcile in step 3). Run steps 1–2 normally.
 
-## 1. Transcribe — (subagent: `config.predica.agents.transcriber`) — *skip when `reuseTranscript`*
+## 1. Transcribe — (subagent: `config.predica.agents.transcriber`) — _skip when `reuseTranscript`_
 
 If `reuseTranscript` (pre-flight step 5), **skip this step entirely** — the corrected transcript already
 exists in `slugDir`. Otherwise dispatch `predica-transcriber` with `audioPath`, `slugDir`, and
 `config.predica.{whisper,audio}`. It returns `{ durationSeconds, transcriptTxt, audioMp3, archive,
 sourceSha256, … }`. Surface the transcript path and duration; keep `sourceSha256` to record in `links.json`.
 
-## 2. ★ HUMAN GATE 1 — correct the transcript ★ — *skip when `reuseTranscript`*
+## 2. ★ HUMAN GATE 1 — correct the transcript ★ — _skip when `reuseTranscript`_
 
 If `reuseTranscript`, **skip this gate** — the human already corrected this transcript on the prior run (the
 recording is byte-identical). Otherwise print the absolute path to `transcript.txt` and ask the user
@@ -76,11 +81,33 @@ recording is byte-identical). Otherwise print the absolute path to `transcript.t
 **Wait for the user to confirm.** Do not proceed until they do. (Never auto-skip — the transcript is the
 source of truth for everything downstream.)
 
+## 2.5 Learn the preacher's voice — (subagent: `config.predica.agents.voiceCoach`)
+
+Dispatch `predica-voice-coach` with the corrected `transcriptTxt`, `voiceProfilePath`, `preacher`,
+`preacherSlug`, `sermonDate`, and the provisional slug. As an expert speech/rhetoric coach it studies how
+**this** preacher actually communicates — **from the corrected transcript only**, never the generated
+`sermon.json` (that would create a model-style feedback loop) — and maintains the local, human-curatable
+per-preacher voice profile at `voiceProfilePath`: **Zone A** (human-curated canonical guide, seeded once
+then never auto-overwritten) + **Zone B** (append-only dated log). The writer reads it at step 3 so the post
+articulates the preacher's accumulated voice. It returns `{ ok, voiceProfilePath, action:
+"created"|"appended"|"unchanged", sermonsAnalyzed, warnings }`.
+
+- **Runs on reuse too** (`reuseTranscript`): the coach self-skips via its `sermonDate` idempotency check, so
+  re-running on the same recording never double-appends.
+- **Runs on `--dry-run`** — it's local-only and only improves the writing (no Contentful, no send).
+- **NON-BLOCKING — never let it block publishing.** If the coach returns `{ ok:false }` or errors, print a
+  one-line warning and **continue** to step 3. Pass `voiceProfilePath` to the writer only if the file now
+  exists; otherwise pass it as absent and the writer infers voice from the transcript alone, as before.
+- Surface a one-line note (path · `action` · `sermonsAnalyzed`) so the human knows the profile grew and can
+  curate Zone A / promote the coach's suggestions whenever they like.
+
 ## 3. Write the bilingual sermon — (subagent: `config.predica.agents.writer`)
 
 Dispatch `predica-writer` with `slugDir`, the corrected `transcript.txt`, `sermonDate`, `preacher`,
-`durationSeconds`, `config.predica.scriptureVersion`, and the serviceLabel defaults. It writes `sermon.json`
-and returns the **canonical** `slug`.
+`durationSeconds`, `config.predica.scriptureVersion`, the serviceLabel defaults, and `voiceProfilePath`
+(the per-preacher voice profile from step 2.5 — **pass it only if the file exists**; absent → the writer
+infers voice from the transcript alone, as before). It writes `sermon.json` and returns the
+**canonical** `slug`.
 
 Then **validate + reconcile** (Bash):
 
@@ -107,7 +134,6 @@ Now that the **canonical slug** exists, check whether this sermon was already pu
    > you made at Gate 2 — corrected text, a replaced featured photo, the publish — **will be overwritten**
    > (if it was published, you'll need to **Publish again** to push the new content live). Proceed?
    > And the **featured image**: regenerate it, or keep the one currently on the entry?"
-
    - **Proceed** → `mode = "update"`, `entryId = <the chosen entry>`. Set `replaceFeatured` from the answer
      (default regenerate; `false` keeps the entry's current image). If the human flags duplicates for cleanup,
      collect those `-N` entry ids to delete after the update succeeds (via `config.predica.entryDeleter`).

@@ -215,5 +215,6 @@ A human always merges the PR and closes the card (moves it to **Done**). Scratch
   - `agent-harness.md` — how to use the agents and commands; the human-gated Trello automation.
   - `predica-bibleverse-reuse.md` — how `/predica` dedups scripture: the derived, version-scoped `bibleVerse` `internalName` (`"Joel 2:13 (NVI)"`) + the `--upsert-by-internal-name` CMA flag; cross-sermon reuse + sermon re-run safety.
   - `predica-rerun-idempotency.md` — re-running `/predica` safely: pre-flight transcript reuse by audio hash, **Gate 0** existing-sermon detection, regenerate by **update-in-place** (`--id`) instead of duplicating, and the guarded `delete-contentful.mjs` cleanup of superseded assets + orphaned legacy verses.
+  - `predica-voice-profiles.md` — the per-preacher voice-coach learning loop: `predica-voice-coach` (step 2.5) learns the preacher's style from the **corrected transcript only** and maintains a local-only (gitignored), human-curatable two-zone profile (`tasks/predicas/_voices/<preacher-slug>.md`: Zone A human-curated + Zone B append-only log) that the writer reads to compound voice quality. Idempotent, non-blocking, style-only.
   - `contributing.md` — branch/commit/PR conventions, semantic-release, husky/CI gates, the worktree flow.
   - `gtm-ga4-setup.md` — _(existing)_ GTM/GA4 analytics + consent setup.
