@@ -1,3 +1,9 @@
+## [1.20.3](https://github.com/gdamalis/idc-redentor-web/compare/v1.20.2...v1.20.3) (2026-06-28)
+
+### Bug Fixes
+
+- **ICR-39:** translate remaining hardcoded blog UI strings (i18n) ([#68](https://github.com/gdamalis/idc-redentor-web/issues/68)) ([26eb2cb](https://github.com/gdamalis/idc-redentor-web/commit/26eb2cbec3c1c0890de6897e2d9b63f7cf6810e7))
+
 ## [1.20.2](https://github.com/gdamalis/idc-redentor-web/compare/v1.20.1...v1.20.2) (2026-06-28)
 
 ## [1.20.1](https://github.com/gdamalis/idc-redentor-web/compare/v1.20.0...v1.20.1) (2026-06-27)
