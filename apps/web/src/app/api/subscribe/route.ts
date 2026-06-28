@@ -18,14 +18,10 @@ export async function POST(request: Request) {
       server,
     });
 
-    const response = await mailchimp.lists.addListMember(audienceId, {
+    await mailchimp.lists.addListMember(audienceId, {
       email_address: email,
       status: "subscribed",
     });
-
-    if (!response.status) {
-      return NextResponse.json({ status: response.status });
-    }
 
     return NextResponse.json({ success: true }, { status: 200 });
      
