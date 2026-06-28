@@ -7,13 +7,13 @@ import {
 } from "./broadcast/types";
 import { claimBroadcast, markFailed, markSent } from "./broadcast/broadcastLog";
 import {
-  MailchimpConfigError,
-  isMailchimpConfigured,
-  sendCampaign,
-} from "./broadcast/mailchimpCampaign";
+  ResendConfigError,
+  isResendBroadcastConfigured,
+  createAndSendBroadcast,
+} from "./broadcast/resendBroadcast";
 
 /**
- * Send ONE email to all current newsletter subscribers via a Mailchimp campaign.
+ * Send ONE email to all current newsletter subscribers via a Resend broadcast.
  * Idempotent on `broadcastId`. Never throws — returns a typed result.
  */
 export async function sendBroadcast(input: BroadcastInput): Promise<BroadcastResult> {
@@ -25,9 +25,9 @@ export async function sendBroadcast(input: BroadcastInput): Promise<BroadcastRes
   }
   const { broadcastId, subject, html, text, locale } = parsed.data;
 
-  if (!isMailchimpConfigured()) {
-    console.error(`[broadcast] mailchimp-not-configured for ${broadcastId}`);
-    return { status: "failed", reason: "mailchimp-not-configured" };
+  if (!isResendBroadcastConfigured()) {
+    console.error(`[broadcast] resend-not-configured for ${broadcastId}`);
+    return { status: "failed", reason: "resend-not-configured" };
   }
 
   const claim = await claimBroadcast(broadcastId);
@@ -36,25 +36,30 @@ export async function sendBroadcast(input: BroadcastInput): Promise<BroadcastRes
 
   try {
     const chrome = BROADCAST_CHROME[locale];
+    const postalAddress =
+      process.env.BROADCAST_POSTAL_ADDRESS ??
+      "Iglesia de Cristo Redentor — Buenos Aires, Argentina";
     const wrappedHtml = renderTemplate("broadcast", {
       lang: locale,
       body: html,
       logoAlt: chrome.logoAlt,
       footer: chrome.footer,
+      postalAddress,
+      unsubscribeLabel: chrome.unsubscribeLabel,
     });
 
-    const campaignId = await sendCampaign({
-      subjectLine: subject,
-      title: `broadcast ${broadcastId}`,
+    const campaignId = await createAndSendBroadcast({
+      subject,
+      name: `broadcast ${broadcastId}`,
       html: wrappedHtml,
       text,
     });
 
     await markSent(broadcastId, campaignId);
-    console.log(`[broadcast] sent ${broadcastId} (${locale}) campaign=${campaignId}`);
+    console.log(`[broadcast] sent ${broadcastId} (${locale}) broadcast=${campaignId}`);
     return { status: "sent", campaignId };
   } catch (error) {
-    const reason = error instanceof MailchimpConfigError ? "mailchimp-not-configured" : "send-failed";
+    const reason = error instanceof ResendConfigError ? "resend-not-configured" : "send-failed";
     console.error(
       `[broadcast] ${reason} for ${broadcastId}:`,
       error instanceof Error ? error.message : String(error),
