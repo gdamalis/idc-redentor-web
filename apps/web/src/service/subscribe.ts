@@ -1,18 +1,36 @@
-export async function subscribe(email: string) {
+import {
+  SUBSCRIBE_BANNER_KEYS,
+  type SubscribeBannerKey,
+} from "@src/components/shared/subscribe-banner/subscribeBannerMessageKeys";
+
+export interface SubscribeResult {
+  success: boolean;
+  messageKey?: SubscribeBannerKey;
+}
+
+export type SubscribeState = SubscribeResult | null;
+
+const KNOWN_KEYS = Object.values(SUBSCRIBE_BANNER_KEYS) as string[];
+
+export async function subscribe(email: string): Promise<SubscribeResult> {
   try {
     const response = await fetch("/api/subscribe", {
       method: "POST",
       body: JSON.stringify({ email }),
     });
-    const data = await response.json();
 
     if (response.ok) {
-      return { success: true, ...data };
-    } else {
-      return { success: false, ...data };
+      return { success: true };
     }
-     
-  } catch (error: unknown) {
-    return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
+
+    const data = await response.json().catch(() => ({}));
+    const messageKey =
+      typeof data?.messageKey === "string" && KNOWN_KEYS.includes(data.messageKey)
+        ? (data.messageKey as SubscribeBannerKey)
+        : SUBSCRIBE_BANNER_KEYS.ERROR_UNEXPECTED;
+
+    return { success: false, messageKey };
+  } catch {
+    return { success: false, messageKey: SUBSCRIBE_BANNER_KEYS.ERROR_UNEXPECTED };
   }
 }

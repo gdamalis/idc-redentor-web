@@ -2,7 +2,8 @@
 
 import LoadingSpinner from "@src/components/ui/LoadingSpinner";
 import { Typography } from "@src/components/ui/typography";
-import { subscribe } from "@src/service/subscribe";
+import { subscribe, type SubscribeState } from "@src/service/subscribe";
+import { useTranslations } from "next-intl";
 import { trackEvent } from "@src/lib/analytics";
 import { useActionState } from "react";
 
@@ -17,11 +18,6 @@ type SubscribeFormProps = {
   size?: "sm" | "lg";
   className?: string;
 };
-
-type SubscribeState = {
-  success: boolean;
-  message?: string;
-} | null;
 
 const getSizeClasses = (size: "sm" | "lg") => {
   switch (size) {
@@ -44,6 +40,7 @@ export const SubscribeForm = ({
   className = "",
 }: SubscribeFormProps) => {
   const sizeClasses = getSizeClasses(size);
+  const t = useTranslations();
 
   const [state, formAction, isPending] = useActionState<
      
@@ -111,8 +108,8 @@ export const SubscribeForm = ({
             {content.successMessage}
           </span>
         )}
-        {!state?.success && (
-          <span className="text-sm text-center mt-2">{state?.message}</span>
+        {!state?.success && state?.messageKey && (
+          <span className="text-sm text-center mt-2">{t(state.messageKey)}</span>
         )}
       </form>
     </div>

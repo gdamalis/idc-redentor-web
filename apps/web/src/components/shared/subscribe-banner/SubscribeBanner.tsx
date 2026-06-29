@@ -3,7 +3,8 @@
 import { EnvelopeIcon } from "@heroicons/react/24/outline";
 import { Container } from "@src/components/ui/container";
 import LoadingSpinner from "@src/components/ui/LoadingSpinner";
-import { subscribe } from "@src/service/subscribe";
+import { subscribe, type SubscribeState } from "@src/service/subscribe";
+import { useTranslations } from "next-intl";
 import { trackEvent } from "@src/lib/analytics";
 import { useActionState } from "react";
 
@@ -17,12 +18,8 @@ type SubscribeBannerProps = {
   };
 };
 
-type SubscribeState = {
-  success: boolean;
-  message?: string;
-} | null;
-
 export const SubscribeBanner = ({ content }: SubscribeBannerProps) => {
+  const t = useTranslations();
   const [state, formAction, isPending] = useActionState<SubscribeState, FormData>(
     async (_currentState, formData) => {
       const email = formData.get("email") as string;
@@ -91,9 +88,9 @@ export const SubscribeBanner = ({ content }: SubscribeBannerProps) => {
           {content.successMessage}
         </p>
       )}
-      {!state?.success && state?.message && (
+      {!state?.success && state?.messageKey && (
         <p className="mt-3 text-center text-sm text-red-600 dark:text-red-400">
-          {state.message}
+          {t(state.messageKey)}
         </p>
       )}
     </section>

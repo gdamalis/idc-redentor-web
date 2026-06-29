@@ -100,6 +100,10 @@
     "error-save-failed": "Failed to save your message. Please try again later.",
     "error-unexpected": "An unexpected error occurred. Please try again later."
   },
+  "SubscribeBanner": {
+    "error-already-subscribed": "This email is already subscribed to our newsletter.",
+    "error-unexpected": "An unexpected error occurred. Please try again later."
+  },
   "BlogPostActions": {
     "share": "Share",
     "copy-link": "Copy link",

@@ -67,11 +67,18 @@ src/app/api/subscribe/route.ts
    ├── require email
    ├── mailchimp.setConfig({ apiKey: MAILCHIMP_API_KEY, server: MAILCHIMP_API_SERVER })
    ├── lists.addListMember(MAILCHIMP_AUDIENCE_ID, { email_address, status: "subscribed" })
-   └── handle "Member Exists" → "Email is already subscribed"
+   ├── success        → { success: true }  (banner shows Contentful successMessage)
+   ├── "Member Exists"→ { messageKey: "SubscribeBanner.error-already-subscribed" }
+   └── other failures → { messageKey: "SubscribeBanner.error-unexpected" }
 ```
 
 - The route talks directly to the Mailchimp Marketing API; there is no database row for subscribers — Mailchimp is the store.
-- It narrows the Mailchimp error object to detect the **"Member Exists"** case and returns a friendly `"Email is already subscribed"` message instead of a 500.
+- The route is **locale-agnostic**: on failure it returns a stable `messageKey` (one of `SubscribeBannerKey` from
+  `src/components/shared/subscribe-banner/subscribeBannerMessageKeys.ts` — `SubscribeBanner.error-already-subscribed`
+  for "Member Exists", `SubscribeBanner.error-unexpected` for all other failures). `src/service/subscribe.ts`
+  validates the key on receipt and falls back to `error-unexpected` for any keyless or network failure. The clients
+  (`SubscribeBanner.tsx`, `SubscribeForm.tsx`) resolve the key via `useTranslations()` against the `SubscribeBanner`
+  namespace in `public/locales/{es-AR,en-US}.json` — see ICR-47.
 - Env: `MAILCHIMP_API_KEY`, `MAILCHIMP_API_SERVER` (the datacenter suffix, e.g. `us21`), `MAILCHIMP_AUDIENCE_ID`.
 - As with the contact form, only an `email` is required — keep it that way. The newsletter should not become a covert PII collector.
 
