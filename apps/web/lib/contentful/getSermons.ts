@@ -249,6 +249,42 @@ export async function getSermon(
   return item ? mapSermon(item) : undefined;
 }
 
+/**
+ * Fetch a single sermon by its Contentful entry id.
+ * Guards against injection: only accepts alphanumeric ids (Contentful sys id format).
+ */
+export async function getSermonById(
+  id: string,
+  locale: string,
+  isDraftMode = false,
+): Promise<Sermon | undefined> {
+  if (!id || !/^[a-zA-Z0-9]{1,64}$/.test(id) || !isValidLocale(locale)) {
+    return undefined;
+  }
+
+  const data = await fetchGraphQL(
+    `query {
+      sermonCollection(
+        where: { sys: { id: "${id}" } },
+        locale: "${locale}",
+        limit: 1,
+        preview: ${isDraftMode ? "true" : "false"}
+      ) {
+        items {
+          ${GRAPHQL_FIELDS}
+        }
+      }
+    }`,
+    isDraftMode,
+  );
+
+  const item = data?.data?.sermonCollection?.items?.[0] as
+    | Record<string, unknown>
+    | undefined;
+
+  return item ? mapSermon(item) : undefined;
+}
+
 export async function getLatestSermons(
   locale: string,
   options: {

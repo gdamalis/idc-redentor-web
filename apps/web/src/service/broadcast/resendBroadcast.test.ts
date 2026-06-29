@@ -38,16 +38,18 @@ afterEach(() => {
 });
 
 describe("isResendBroadcastConfigured", () => {
-  it("true when key + audience set", () => expect(isResendBroadcastConfigured()).toBe(true));
+  it("true when key + audience set", () => expect(isResendBroadcastConfigured("es-AR")).toBe(true));
   it("false when RESEND_AUDIENCE_ID missing", () => {
+    // resolveAudienceId("es-AR") falls back to legacy RESEND_AUDIENCE_ID; delete both
     delete (process.env as Record<string, string | undefined>).RESEND_AUDIENCE_ID;
-    expect(isResendBroadcastConfigured()).toBe(false);
+    delete (process.env as Record<string, string | undefined>).RESEND_AUDIENCE_ID_ES_AR;
+    expect(isResendBroadcastConfigured("es-AR")).toBe(false);
   });
 });
 
 describe("createAndSendBroadcast", () => {
   it("creates then sends and returns ok result with broadcast id", async () => {
-    const result = await createAndSendBroadcast({ subject: "S", name: "broadcast b1", html: "<p>x</p>", text: "x" });
+    const result = await createAndSendBroadcast({ subject: "S", name: "broadcast b1", html: "<p>x</p>", text: "x", audienceId: "aud_1" });
     expect(result).toEqual({ ok: true, id: "bcast_1" });
     expect(create).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -63,23 +65,22 @@ describe("createAndSendBroadcast", () => {
     expect(send).toHaveBeenCalledWith("bcast_1");
   });
 
-  it("returns resend-not-configured and never calls the SDK when unconfigured", async () => {
-    delete (process.env as Record<string, string | undefined>).RESEND_AUDIENCE_ID;
-    const result = await createAndSendBroadcast({ subject: "S", name: "n", html: "h", text: "t" });
+  it("returns resend-not-configured and never calls the SDK when audienceId is empty", async () => {
+    const result = await createAndSendBroadcast({ subject: "S", name: "n", html: "h", text: "t", audienceId: "" });
     expect(result).toEqual({ ok: false, reason: "resend-not-configured" });
     expect(create).not.toHaveBeenCalled();
   });
 
   it("returns send-failed and skips send when create returns an error", async () => {
     create.mockResolvedValueOnce({ data: null, error: { message: "bad", name: "validation_error" } });
-    const result = await createAndSendBroadcast({ subject: "S", name: "n", html: "h", text: "t" });
+    const result = await createAndSendBroadcast({ subject: "S", name: "n", html: "h", text: "t", audienceId: "aud_1" });
     expect(result).toMatchObject({ ok: false, reason: "send-failed" });
     expect(send).not.toHaveBeenCalled();
   });
 
   it("returns send-failed when send returns an error", async () => {
     send.mockResolvedValueOnce({ data: null, error: { message: "nope", name: "application_error" } });
-    const result = await createAndSendBroadcast({ subject: "S", name: "n", html: "h", text: "t" });
+    const result = await createAndSendBroadcast({ subject: "S", name: "n", html: "h", text: "t", audienceId: "aud_1" });
     expect(result).toMatchObject({ ok: false, reason: "send-failed" });
   });
 });

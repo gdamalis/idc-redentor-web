@@ -1,5 +1,7 @@
 import { Resend } from "resend";
 import { FROM_EMAIL } from "../mailing.service";
+import { resolveAudienceId } from "@src/service/resendAudience";
+import type { BroadcastLocale } from "./types";
 
 export const BROADCAST_REPLY_TO = "info@idcredentor.org";
 export const BROADCAST_FROM_NAME = "Iglesia de Cristo Redentor";
@@ -10,22 +12,23 @@ export interface BroadcastParams {
   name: string;
   html: string;
   text: string;
+  /** Resolved by the caller from the locale via resolveAudienceId. */
+  audienceId: string;
 }
 
 export type BroadcastDispatchResult =
   | { ok: true; id: string }
   | { ok: false; reason: "resend-not-configured" | "send-failed"; message?: string };
 
-export function isResendBroadcastConfigured(): boolean {
-  return Boolean(process.env.RESEND_API_KEY && process.env.RESEND_AUDIENCE_ID);
+export function isResendBroadcastConfigured(locale: BroadcastLocale): boolean {
+  return Boolean(process.env.RESEND_API_KEY && resolveAudienceId(locale));
 }
 
 export async function createAndSendBroadcast(
   params: BroadcastParams,
 ): Promise<BroadcastDispatchResult> {
   const apiKey = process.env.RESEND_API_KEY;
-  const audienceId = process.env.RESEND_AUDIENCE_ID;
-  if (!apiKey || !audienceId) {
+  if (!apiKey || !params.audienceId) {
     return { ok: false, reason: "resend-not-configured" };
   }
 
@@ -33,7 +36,7 @@ export async function createAndSendBroadcast(
   const resend = new Resend(apiKey);
 
   const { data: created, error: createError } = await resend.broadcasts.create({
-    audienceId,
+    audienceId: params.audienceId,
     from,
     replyTo: BROADCAST_REPLY_TO,
     subject: params.subject,

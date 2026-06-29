@@ -21,6 +21,8 @@ declare namespace NodeJS {
 
     // Resend Broadcasts
     RESEND_AUDIENCE_ID: string;
+    RESEND_AUDIENCE_ID_ES_AR: string;
+    RESEND_AUDIENCE_ID_EN_US: string;
     BROADCAST_POSTAL_ADDRESS: string;
 
     // Mail Provider

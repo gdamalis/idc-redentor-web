@@ -1,6 +1,7 @@
 import { fetchGraphQL } from "./fetch";
 import { isValidSlug } from "./slug";
 import { isValidLocale } from "@src/i18n/config";
+import type { BlogPost } from "@src/types/BlogPost";
 
 const GRAPHQL_FIELDS = `
   title
@@ -175,4 +176,36 @@ export async function getBlogPostPage(
   );
 
   return data?.data?.blogPostPageCollection?.items[0];
+}
+
+/**
+ * Fetch a single blog post by its Contentful entry id.
+ * Guards against injection: only accepts alphanumeric ids (Contentful sys id format).
+ */
+export async function getBlogPostPageById(
+  id: string,
+  locale: string,
+  isDraftMode = false,
+): Promise<BlogPost | undefined> {
+  if (!id || !/^[a-zA-Z0-9]{1,64}$/.test(id) || !isValidLocale(locale)) {
+    return undefined;
+  }
+
+  const data = await fetchGraphQL(
+    `query {
+        blogPostPageCollection(
+          where: { sys: { id: "${id}" } },
+          locale: "${locale}",
+          limit: 1,
+          preview: ${isDraftMode ? "true" : "false"}
+        ) {
+          items {
+            ${GRAPHQL_FIELDS}
+          }
+        }
+      }`,
+    isDraftMode,
+  );
+
+  return data?.data?.blogPostPageCollection?.items?.[0];
 }

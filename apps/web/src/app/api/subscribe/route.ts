@@ -1,60 +1,30 @@
-import mailchimp from "@mailchimp/mailchimp_marketing";
 import { NextResponse } from "next/server";
+import { z } from "zod";
+import { addSubscriber } from "@src/service/subscribe.service";
+import { BROADCAST_LOCALES, DEFAULT_BROADCAST_LOCALE } from "@src/service/broadcast/types";
+
+const bodySchema = z.object({
+  email: z.string().trim().email(),
+  locale: z.enum(BROADCAST_LOCALES).optional(),
+});
 
 export async function POST(request: Request) {
-  try {
-    const { email } = await request.json();
-
-    if (!email) {
-      return NextResponse.json({ error: "Email is required" }, { status: 400 });
-    }
-
-    const apiKey = process.env.MAILCHIMP_API_KEY;
-    const server = process.env.MAILCHIMP_API_SERVER;
-    const audienceId = process.env.MAILCHIMP_AUDIENCE_ID ?? "";
-
-    mailchimp.setConfig({
-      apiKey,
-      server,
-    });
-
-    await mailchimp.lists.addListMember(audienceId, {
-      email_address: email,
-      status: "subscribed",
-    });
-
-    return NextResponse.json({ success: true }, { status: 200 });
-     
-  } catch (error: unknown) {
-    // Type narrowing for Mailchimp error
-    if (
-      error &&
-      typeof error === "object" &&
-      "response" in error &&
-      error.response &&
-      typeof error.response === "object" &&
-      "error" in error.response &&
-      error.response.error &&
-      typeof error.response.error === "object" &&
-      "text" in error.response.error &&
-      typeof error.response.error.text === "string"
-    ) {
-      try {
-        const errorData = JSON.parse(error.response.error.text);
-        if (errorData?.title === "Member Exists") {
-          return NextResponse.json(
-            { messageKey: "SubscribeBanner.error-already-subscribed" },
-            { status: "status" in error && typeof error.status === "number" ? error.status : 400 },
-          );
-        }
-      } catch {
-        // If JSON parsing fails, fall through to generic error
-      }
-    }
-
+  const json = await request.json().catch(() => null);
+  const parsed = bodySchema.safeParse(json);
+  if (!parsed.success) {
+    return NextResponse.json({ messageKey: "SubscribeBanner.error-unexpected" }, { status: 400 });
+  }
+  const locale = parsed.data.locale ?? DEFAULT_BROADCAST_LOCALE;
+  const outcome = await addSubscriber(parsed.data.email, locale);
+  if (outcome.ok) return NextResponse.json({ success: true }, { status: 200 });
+  if (outcome.reason === "already-subscribed") {
     return NextResponse.json(
-      { messageKey: "SubscribeBanner.error-unexpected" },
-      { status: 500 },
+      { messageKey: "SubscribeBanner.error-already-subscribed" },
+      { status: 409 },
     );
   }
+  if (outcome.reason === "invalid-input") {
+    return NextResponse.json({ messageKey: "SubscribeBanner.error-unexpected" }, { status: 400 });
+  }
+  return NextResponse.json({ messageKey: "SubscribeBanner.error-unexpected" }, { status: 500 });
 }

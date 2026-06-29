@@ -26,6 +26,9 @@ beforeEach(() => {
   vi.clearAllMocks();
   process.env.NEXT_PUBLIC_BASE_URL = "https://www.idcredentor.org";
   process.env.RESEND_API_KEY = "SECRET_KEY_123";
+  // resolveAudienceId("es-AR") falls back to the legacy var; stub it so broadcast.service
+  // can resolve an audienceId after the (mocked) isResendBroadcastConfigured check.
+  process.env.RESEND_AUDIENCE_ID = "aud_1";
   process.env.BROADCAST_POSTAL_ADDRESS = "Calle Falsa 123, Buenos Aires, Argentina";
   vi.mocked(isResendBroadcastConfigured).mockReturnValue(true);
   vi.mocked(claimBroadcast).mockResolvedValue("claimed");

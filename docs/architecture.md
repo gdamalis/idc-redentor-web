@@ -25,8 +25,8 @@ idc-redentor-website/
 │   │   │   └── blog/[slug]/         # Blog index + article pages
 │   │   └── api/                     # Route handlers (no auth)
 │   │       ├── likes/               # GET/POST blog likes
-│   │       ├── subscribe/           # POST → Mailchimp
-│   │       ├── revalidate/          # POST → revalidateTag("site-content")
+│   │       ├── subscribe/           # POST → Resend (per-locale audience)
+│   │       ├── revalidate/          # POST → revalidateTag + per-locale subscriber broadcast
 │   │       └── draft/{enable,disable}/  # Contentful preview toggles
 │   ├── components/                  # UI + feature components
 │   │   └── features/contact-form/   # contactFormAction.ts (Server Action)
@@ -99,7 +99,7 @@ API routes and the contact-form Server Action follow their own short lifecycles 
 
 ## Revalidation
 
-Contentful content is cached and revalidated **on demand**, not on a timer. A Contentful publish webhook calls `POST /api/revalidate` with header `x-vercel-reval-key`. The route checks it against `CONTENTFUL_REVALIDATE_SECRET` and calls `revalidateTag("site-content")`, which drops the cache for every `fetchGraphQL` request (all are tagged `"site-content"`). See [`contentful-data-layer.md`](./contentful-data-layer.md).
+Contentful content is cached and revalidated **on demand**, not on a timer. A Contentful publish webhook calls `POST /api/revalidate` with header `x-vercel-reval-key`. The route checks it against `CONTENTFUL_REVALIDATE_SECRET` and calls `revalidateTag("site-content", "max")`, which drops the cache for every `fetchGraphQL` request (all are tagged `"site-content"`). Revalidation runs first and unconditionally; the same route then fires an **isolated** per-locale subscriber broadcast when the published entry is a blog post or sermon (a notify failure never breaks revalidation). See [`contentful-data-layer.md`](./contentful-data-layer.md) and [`forms-and-email.md`](./forms-and-email.md).
 
 ## Internationalization
 

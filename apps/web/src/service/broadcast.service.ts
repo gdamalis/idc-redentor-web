@@ -10,6 +10,7 @@ import {
   isResendBroadcastConfigured,
   createAndSendBroadcast,
 } from "./broadcast/resendBroadcast";
+import { resolveAudienceId } from "./resendAudience";
 
 /**
  * Send ONE email to all current newsletter subscribers via a Resend broadcast.
@@ -24,8 +25,13 @@ export async function sendBroadcast(input: BroadcastInput): Promise<BroadcastRes
   }
   const { broadcastId, subject, html, text, locale } = parsed.data;
 
-  if (!isResendBroadcastConfigured()) {
+  if (!isResendBroadcastConfigured(locale)) {
     console.error(`[broadcast] resend-not-configured for ${broadcastId}`);
+    return { status: "failed", reason: "resend-not-configured" };
+  }
+
+  const audienceId = resolveAudienceId(locale);
+  if (!audienceId) {
     return { status: "failed", reason: "resend-not-configured" };
   }
 
@@ -54,6 +60,7 @@ export async function sendBroadcast(input: BroadcastInput): Promise<BroadcastRes
       name: `broadcast ${broadcastId}`,
       html: wrappedHtml,
       text,
+      audienceId,
     });
     if (!dispatch.ok) {
       console.error(

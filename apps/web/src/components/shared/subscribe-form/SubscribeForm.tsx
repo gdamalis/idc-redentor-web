@@ -3,7 +3,7 @@
 import LoadingSpinner from "@src/components/ui/LoadingSpinner";
 import { Typography } from "@src/components/ui/typography";
 import { subscribe, type SubscribeState } from "@src/service/subscribe";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { trackEvent } from "@src/lib/analytics";
 import { useActionState } from "react";
 
@@ -41,14 +41,15 @@ export const SubscribeForm = ({
 }: SubscribeFormProps) => {
   const sizeClasses = getSizeClasses(size);
   const t = useTranslations();
+  const locale = useLocale();
 
   const [state, formAction, isPending] = useActionState<
-     
+
     SubscribeState,
     FormData
   >(async (currentState, formData) => {
     const email = formData.get("email") as string;
-    const data = await subscribe(email);
+    const data = await subscribe(email, locale);
     
     if (data.success) {
       trackEvent("newsletter_subscribe", {

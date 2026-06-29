@@ -12,11 +12,11 @@ export type SubscribeState = SubscribeResult | null;
 
 const KNOWN_KEYS = Object.values(SUBSCRIBE_BANNER_KEYS) as string[];
 
-export async function subscribe(email: string): Promise<SubscribeResult> {
+export async function subscribe(email: string, locale: string): Promise<SubscribeResult> {
   try {
     const response = await fetch("/api/subscribe", {
       method: "POST",
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ email, locale }),
     });
 
     if (response.ok) {

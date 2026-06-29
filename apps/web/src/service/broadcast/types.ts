@@ -2,9 +2,10 @@ import { z } from "zod";
 
 export const BROADCAST_LOCALES = ["es-AR", "en-US"] as const;
 export type BroadcastLocale = (typeof BROADCAST_LOCALES)[number];
+export const DEFAULT_BROADCAST_LOCALE: BroadcastLocale = "es-AR";
 
 export const broadcastInputSchema = z.object({
-  /** Stable, caller-supplied id. ICR-44 uses `blog:<slug>:<locale>`. */
+  /** Stable, caller-supplied id. Format: `<blog|sermon>:<entryId>:<locale>`. */
   broadcastId: z.string().trim().min(1),
   subject: z.string().trim().min(1),
   /** Inner body HTML; the service wraps it in the broadcast template. */

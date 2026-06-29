@@ -4,7 +4,7 @@ import { EnvelopeIcon } from "@heroicons/react/24/outline";
 import { Container } from "@src/components/ui/container";
 import LoadingSpinner from "@src/components/ui/LoadingSpinner";
 import { subscribe, type SubscribeState } from "@src/service/subscribe";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { trackEvent } from "@src/lib/analytics";
 import { useActionState } from "react";
 
@@ -20,10 +20,11 @@ type SubscribeBannerProps = {
 
 export const SubscribeBanner = ({ content }: SubscribeBannerProps) => {
   const t = useTranslations();
+  const locale = useLocale();
   const [state, formAction, isPending] = useActionState<SubscribeState, FormData>(
     async (_currentState, formData) => {
       const email = formData.get("email") as string;
-      const data = await subscribe(email);
+      const data = await subscribe(email, locale);
       
       if (data.success) {
         trackEvent("newsletter_subscribe", {
