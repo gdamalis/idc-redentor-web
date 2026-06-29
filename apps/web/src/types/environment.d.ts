@@ -18,7 +18,11 @@ declare namespace NodeJS {
     MAILCHIMP_API_KEY: string;
     MAILCHIMP_API_SERVER: string;
     MAILCHIMP_AUDIENCE_ID: string;
-    
+
+    // Resend Broadcasts
+    RESEND_AUDIENCE_ID: string;
+    BROADCAST_POSTAL_ADDRESS: string;
+
     // Mail Provider
     MAIL_PROVIDER: 'sendgrid' | 'resend';
     CONTACT_FORM_RECIPIENT_EMAIL: string;

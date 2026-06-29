@@ -2,19 +2,53 @@
 
 > **Monorepo note:** the site moved to **`apps/web/`**. App paths in this doc (`src/…`, `lib/…`, `public/…`, `config/…`, `scripts/contentful/…`, `next.config.ts`, `tsconfig.json`, …) now live under `apps/web/`; only `.claude/`, `docs/`, and `tasks/` stay at the repo root. Run commands at the root (Turbo proxies them) or scope to the site with `pnpm --filter @idcr/web <task>` / `pnpm -C apps/web <cmd>`.
 
-> **Purpose:** The only stateful part of the app. How the cached MongoDB client works, the two collections it backs (`likes`, `contact`), the anonymous like toggle and its visitor de-dup, and the write-safety considerations.
-> **Last reviewed:** 2026-06-21
+> **Purpose:** The only stateful part of the app. How the cached MongoDB client works, the three collections it backs (`likes`, `contact`, `broadcast_log`), the anonymous like toggle and its visitor de-dup, and the write-safety considerations.
+> **Last reviewed:** 2026-06-28
 
 ## Scope: this is the whole database
 
-MongoDB is **not** the content store — Contentful is. Mongo exists only for the two things Contentful can't do: an anonymous blog **like** counter and **saved contact-form messages**. Both live in a database literally named **`website`**:
+MongoDB is **not** the content store — Contentful is. Mongo exists only for the things Contentful can't do: an anonymous blog **like** counter, **saved contact-form messages**, and **broadcast send tracking**. All three live in a database literally named **`website`**:
 
-| Collection | Written by                                                   | Read by                                          | Doc shape                                        |
-| ---------- | ------------------------------------------------------------ | ------------------------------------------------ | ------------------------------------------------ |
-| `likes`    | `POST /api/likes` → `like.service.ts#toggleLike`             | `GET /api/likes` → `getLikes`; the blog UI       | `{ slug, count, visitors: string[], updatedAt }` |
-| `contact`  | contact Server Action → `contact.service.ts#sendContactForm` | `getContactMessages` (internal, no public route) | `{ name, email, subject, message, createdAt }`   |
+| Collection      | Written by                                                   | Read by                                           | Doc shape                                                                               |
+| --------------- | ------------------------------------------------------------ | ------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `likes`         | `POST /api/likes` → `like.service.ts#toggleLike`             | `GET /api/likes` → `getLikes`; the blog UI        | `{ slug, count, visitors: string[], updatedAt }`                                        |
+| `contact`       | contact Server Action → `contact.service.ts#sendContactForm` | `getContactMessages` (internal, no public route)  | `{ name, email, subject, message, createdAt }`                                          |
+| `broadcast_log` | `sendBroadcast` → `broadcast/broadcastLog.ts#claimBroadcast` | never read by the public site (dedupe guard only) | `{ broadcastId (unique), status, campaignId?, reason?, createdAt, updatedAt, sentAt? }` |
 
-If a task mentions "the database" on this project, it means these two collections — nothing else.
+If a task mentions "the database" on this project, it means these three collections — nothing else.
+
+### `broadcast_log` collection (ICR-29)
+
+The `broadcast_log` collection is the **idempotency guard** for the broadcast engine
+(`apps/web/src/service/broadcast/broadcastLog.ts`). It is never read by the public site.
+
+**Document shape:**
+
+```ts
+type BroadcastLogStatus = "sending" | "sent" | "failed";
+
+interface BroadcastLogDocument {
+  broadcastId: string; // unique (caller-supplied key, e.g. "blog:<slug>:<locale>")
+  status: BroadcastLogStatus;
+  campaignId?: string; // Mailchimp campaign id, set on success
+  reason?: string; // failure token, set on failure
+  createdAt: Date;
+  updatedAt: Date;
+  sentAt?: Date; // set when status transitions to "sent"
+}
+```
+
+**Unique index:** `{ broadcastId: 1 }` (created lazily on first `claimBroadcast` call via
+`collection.createIndex({ broadcastId: 1 }, { unique: true })`).
+
+**Claim semantics:** `claimBroadcast` uses an insert-first upsert filtered to
+`status: { $ne: "sent" }`. A doc that is already `sent` fails the filter, the upsert attempts an
+insert, the unique index throws E11000, and the engine interprets that as `already-sent` — no second
+Mailchimp send. A `failed` doc matches the filter and is re-claimed (retryable). No doc → upserted
+as `sending`. This guarantees at-most-one campaign per `broadcastId` even under concurrent calls.
+
+See [`forms-and-email.md`](./forms-and-email.md#broadcast-engine-icr-29) for the full engine
+description.
 
 ## The cached client (`src/service/database.service.ts`)
 

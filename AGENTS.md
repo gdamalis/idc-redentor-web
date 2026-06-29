@@ -48,6 +48,7 @@ See `docs/architecture.md` and the domain docs in `docs/` for detail.
 ## Code Conventions
 
 - TypeScript strict mode everywhere; functional/declarative; DRY; early returns.
+- **Functional-first — avoid classes.** Prefer pure functions, plain objects, modules, and closures over classes. Model failures/outcomes as **return values** (a discriminated-union result like `{ ok: true } | { ok: false; reason }`, or `null`/`boolean`), never by throwing custom `Error` subclasses for control flow. No `class` declarations unless a scenario truly requires it (e.g. instantiating an unavoidable third-party SDK such as `new Resend()`); isolate and flag any such case in review. Repo-wide default for every session/agent.
 - **Prefer `interface` over `type`**; **avoid enums (use const maps)**; use **`satisfies`** for validation.
 - **Prefer `??` over `||`**.
 - **RSC-first** — minimize `'use client'`; use Suspense + error boundaries for async.

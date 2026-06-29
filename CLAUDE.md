@@ -127,6 +127,7 @@ MongoDB    → src/service/database.service.ts (cached client) → like/contact 
 Distilled from `.cursorrules` (which `AGENTS.md` supersedes). Apply these by default:
 
 - **TypeScript everywhere, strict mode.** Functional/declarative style, DRY, early returns. Structure files as: exports → subcomponents → helpers → types.
+- **Functional-first — avoid classes.** Strongly prefer pure functions, plain objects, modules, and closures over classes. Model failures/outcomes as **return values** — a discriminated-union result (e.g. `{ ok: true; … } | { ok: false; reason: … }`) or `null`/`boolean` — never by throwing custom `Error` subclasses for control flow. Do **not** introduce `class` declarations unless a scenario genuinely requires it (e.g. instantiating an unavoidable third-party SDK such as `new Resend()`); isolate any such case and call it out in review. Repo-wide default for every session/agent.
 - **Prefer `interface` over `type`** for object shapes. **Avoid enums — use const maps.** Use the **`satisfies`** operator for type validation.
 - **Prefer nullish coalescing (`??`) over logical or (`||`)**.
 - **RSC-first**: favor React Server Components, minimize `'use client'`. Use error boundaries and Suspense for async work.
