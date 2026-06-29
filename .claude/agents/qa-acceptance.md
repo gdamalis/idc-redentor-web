@@ -41,9 +41,16 @@ ACs may be written in Spanish (`es-AR` is the default locale) or English. Classi
 
 When an AC references a page, test it in the locale the AC implies. For locale-agnostic ACs, verify the `es-AR` route (the default) and spot-check `en-US`. **Quote the original AC text verbatim** in `perAC[].text` — do not translate it away.
 
-## Artifacts (no repo pollution, no commits)
+## Artifacts (gitignored evidence dir, no commits)
 
-Create a run directory once: `RUN_DIR=$(mktemp -d)/qa-${ticketId}-${runId}`. Save screenshots there and report **absolute paths**. You do **not** commit anything — persisting a regression spec is a code change and must go through a worktree + PR (Phase 2/3), never a stray commit.
+Create the run directory once, under the **gitignored** QA-evidence tree in the main repo:
+
+```bash
+RUN_DIR="${mainRepoRoot}/tasks/qa-evidence/${ticketId}/${runId}"
+mkdir -p "$RUN_DIR"
+```
+
+**Always pass the ABSOLUTE `$RUN_DIR/<file>.png` to `browser_take_screenshot` — NEVER a bare filename.** A bare name (e.g. `ac1-home-es.png`) makes the Playwright MCP write to its current working directory (the repo root), polluting `git status`. `tasks/qa-evidence/` is gitignored: the screenshots persist locally for review and are safe to delete anytime, but they are **never committed**. Report **absolute paths** in your evidence bundle. You do **not** commit anything — persisting a regression spec is a code change and must go through a worktree + PR (Phase 2/3), never a stray commit.
 
 ## Resolving and validating the target URL (env-by-name)
 
@@ -64,7 +71,7 @@ For each AC:
    - 🖥️ **UI** — drive via the Playwright MCP.
    - 🔌 **API** — assert via `curl -sS` (unauthenticated; no cookie file needed). Verify status code + key response fields.
    - 🖥️+🔌 **Both** — exercise the UI and assert the underlying request/response.
-2. **Execute** against the preview. UI: navigate, interact, assert on the actual rendered state (`browser_snapshot` for structure; `browser_take_screenshot` → `$RUN_DIR/acN-<desc>.png` at key states). For each screenshot note **which AC it evidences** and a **one-line caption** (the caption is what a human reads next to the image). Capture at least one screenshot for every UI AC you pass/partial/fail (the proof). Watch `browser_console_messages` for errors relevant to the AC. Use **resilient** selectors (role/text/`.first()`, conditional checks) — Contentful content is non-deterministic.
+2. **Execute** against the preview. UI: navigate, interact, assert on the actual rendered state (`browser_snapshot` for structure; `browser_take_screenshot` → the **absolute** `$RUN_DIR/acN-<desc>.png` at key states — never a bare filename). For each screenshot note **which AC it evidences** and a **one-line caption** (the caption is what a human reads next to the image). Capture at least one screenshot for every UI AC you pass/partial/fail (the proof). Watch `browser_console_messages` for errors relevant to the AC. Use **resilient** selectors (role/text/`.first()`, conditional checks) — Contentful content is non-deterministic.
 3. **Decide the result** precisely — accuracy matters more than coverage:
    - ✅ **Pass** — the AC is demonstrably satisfied (cite the evidence/screenshot).
    - ❌ **Fail** — demonstrably not satisfied (state expected vs actual).
@@ -130,7 +137,7 @@ Return **exactly** these two blocks, in order. Block 1 is the tester **evidence 
   "blockers": ["..."],
   "evidence": [
     {
-      "path": "/abs/$RUN_DIR/ac1-home-es.png",
+      "path": "<mainRepoRoot>/tasks/qa-evidence/ICR-45/<runId>/ac1-home-es.png",
       "caption": "Home es-AR muestra el hero banner",
       "ac": 1
     }

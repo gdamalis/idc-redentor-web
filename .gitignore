@@ -80,9 +80,12 @@ apps/web/scripts/contentful/backups/
 .playwright-mcp/
 
 # QA evidence — per-ticket browser screenshots (binary, large; uploaded to Jira, not source of truth)
+# Agents now write to tasks/qa-evidence/<ticket>/<run>/; the root-anchored globs are a safety net
+# for any stray bare-filename screenshot a tool drops at the repo root.
 tasks/qa-evidence/
 tasks/qa-runs/
-qa-icr*.png
+/ac*.png
+/qa-*.png
 
 # turborepo cache
 .turbo/

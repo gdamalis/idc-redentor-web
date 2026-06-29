@@ -276,6 +276,7 @@
     "todo": "tasks/todo.md",
     "lessons": "tasks/lessons.md",
     "qaEnv": "qa-env.json",
+    "qaEvidence": "tasks/qa-evidence",
     "docs": "docs",
     "productBrain": "docs/product"
   },

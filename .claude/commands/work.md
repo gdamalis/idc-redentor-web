@@ -262,7 +262,7 @@ The Jira **Priority** field is set ONCE during refinement and never updated by a
 
 **Runs only when `EXPLORER_NEEDS_DESIGN_GATE === true`** (same condition as section 6). When the design gate is skipped there is no spec file — section 8 builds the plan directly from the card + explorer summary. The `★ HUMAN GATE ★` spec-review block below executes only when the gate is required.
 
-Write the spec to `${config.paths.specs}/ICR-N-<slug>.md`. Required sections (ICR-tailored):
+Write the spec to the **main checkout** at `${MAIN_REPO_ROOT}/${config.paths.specs}/ICR-N-<slug>.md` (pass this absolute path as the `superpowers:brainstorming` spec-location override — do NOT rely on the session cwd, which is the main repo regardless of the worktree). It lives in main during design + review so you can open it at the usual `tasks/specs/` location; section 8.3 moves it into the worktree after the plan is approved so it rides the feature PR. Required sections (ICR-tailored):
 
 1. **Dependencies Check** — what must exist before starting
 2. **Requirements** — numbered, code-level detail
@@ -278,13 +278,13 @@ Write the spec to `${config.paths.specs}/ICR-N-<slug>.md`. Required sections (IC
 
 Flag sensitive areas if touched: **email services, forms (contact/subscribe), likes/Mongo writes, CSP/headers, env/secrets.**
 
-**★ HUMAN GATE ★** — Ask the user explicitly: "Spec written to `<path>`. Please review and let me know if any changes before I write the implementation plan." Wait for approval. Apply revisions until they're happy.
+**★ HUMAN GATE ★** — Ask the user explicitly, printing the **absolute main-checkout path**: "Spec written to `${MAIN_REPO_ROOT}/${config.paths.specs}/ICR-N-<slug>.md` (main checkout — open it there). Please review and let me know if any changes before I write the implementation plan. After you approve the plan I'll move the spec + plan into the worktree so they're committed in this ticket's PR." Wait for approval. Apply revisions until they're happy.
 
 ## 8. Write the implementation plan
 
-Invoke the `superpowers:writing-plans` skill. Output goes to `${config.paths.specs}/ICR-N-<slug>.plan.md` (same dir, `.plan.md` suffix). The plan turns each spec checkpoint into concrete file edits with verification steps.
+Invoke the `superpowers:writing-plans` skill. Output goes to the **main checkout** at `${MAIN_REPO_ROOT}/${config.paths.specs}/ICR-N-<slug>.plan.md` (same dir as the spec, `.plan.md` suffix — pass this absolute path as the plan-location override). The plan turns each spec checkpoint into concrete file edits with verification steps. Section 8.3 moves it (with the spec) into the worktree after this step + its guards pass.
 
-> **When the design gate was skipped** (sections 6 + 7 did not run, so there is **no spec doc**): pass the **card description + explorer summary** to `superpowers:writing-plans` instead of a spec path. The plan is still written to `${config.paths.specs}/ICR-N-<slug>.plan.md`. When a spec exists, behave as today (plan from the spec).
+> **When the design gate was skipped** (sections 6 + 7 did not run, so there is **no spec doc**): pass the **card description + explorer summary** to `superpowers:writing-plans` instead of a spec path. The plan is still written to the main checkout at `${MAIN_REPO_ROOT}/${config.paths.specs}/ICR-N-<slug>.plan.md` (section 8.3 then moves the `.plan.md` alone — there is no spec `.md` to move). When a spec exists, behave as today (plan from the spec).
 
 ### 8.1 Ticket-too-large guard
 
@@ -295,7 +295,7 @@ After the plan is written, count the **Implementation Checkpoints** in it (each 
 Options:
 
 - **Continue anyway** — proceed to step 9 (you've decided the size is justified).
-- **Stop and split** — abort the pipeline cleanly. The spec + plan files stay; the worktree stays; the issue stays **In Progress**. Print: "Pipeline paused at step 8.1. Spec is at `<path>`. Suggest splitting into N follow-up Jira issues in To Do, then `/work` each separately."
+- **Stop and split** — abort the pipeline cleanly. The spec + plan files stay in the **main checkout** (the 8.3 move runs only after this guard passes); the worktree stays; the issue stays **In Progress**. Print: "Pipeline paused at step 8.1. Spec is at `${MAIN_REPO_ROOT}/${config.paths.specs}/ICR-N-<slug>.md`. Suggest splitting into N follow-up Jira issues in To Do, then `/work` each separately."
 
 This guard is a one-time gate; once the user picks "Continue anyway," subsequent checkpoints inside the same `/work` run don't re-trigger.
 
@@ -326,6 +326,34 @@ After the plan is written, determine whether it changes the **Contentful content
 4. **Cutover is HUMAN-ONLY and deferred** — `/work` NEVER re-points the `master` alias or touches `production`. At PR-merge time the human executes the alias-swap. A **Done-class human gate**: like merge and Done, no agent or command performs it.
 
 One-time gate; once the lane is chosen, later checkpoints in the same run don't re-trigger.
+
+## 8.3 Move spec + plan into the worktree (so they ride the PR)
+
+The spec and plan were written + reviewed in the **main checkout** for quick access. Now that the plan is approved and the 8.1/8.2 guards have passed, **move both into the worktree** so the implementer's PR carries them and the main checkout stays clean (no more untracked `tasks/specs/` clutter that needs periodic manual sweeps). The orchestrator does this here — do **not** leave it to the implementer:
+
+```bash
+SPECS_REL="${config.paths.specs}"                                    # tasks/specs
+WORKTREE_PATH="${MAIN_REPO_ROOT}/${config.worktree.parentDir}/ICR-N"  # <main>/.claude/worktrees/ICR-N
+mkdir -p "${WORKTREE_PATH}/${SPECS_REL}"
+
+# Move whichever exist: the .plan.md always; the spec .md only when the design gate ran.
+moved=()
+for f in "ICR-N-<slug>.md" "ICR-N-<slug>.plan.md"; do
+  src="${MAIN_REPO_ROOT}/${SPECS_REL}/$f"
+  if [ -f "$src" ]; then
+    mv "$src" "${WORKTREE_PATH}/${SPECS_REL}/"
+    moved+=("${SPECS_REL}/$f")
+  fi
+done
+
+# Commit them on the feature branch (the first commit on the branch; implementation commits build on top).
+git -C "${WORKTREE_PATH}" add "${moved[@]}"
+git -C "${WORKTREE_PATH}" commit -m "docs(ICR-N): add spec and implementation plan"
+```
+
+- **Design-gate-skipped run** (no spec `.md`): only the `.plan.md` moves — use the plan-only message `docs(ICR-N): add implementation plan`.
+- After this step, `git status` in the main checkout shows **no** untracked `tasks/specs/ICR-N-*` — they now live (committed) in the worktree and land in `main`'s history when the PR merges.
+- All remaining steps (§9 onward) already run against the worktree, so the implementer's commits build on top of this docs commit.
 
 ## 9. First checkpoint: implement (subagent: implementer)
 
@@ -716,7 +744,7 @@ To survive aborted runs (user `Ctrl-C`, machine sleep, network drop), the orches
 
 ### Where
 
-`${config.paths.specs}/ICR-N-<slug>.state.json` — same directory as the spec and plan.
+`${MAIN_REPO_ROOT}/${config.paths.specs}/ICR-N-<slug>.state.json` — in the **main checkout**'s `tasks/specs/` (gitignored). The orchestrator (this main session) owns it, so unlike the spec + plan — which section 8.3 moves into the worktree — the state file stays in main, keeping resume state durable even if the worktree is removed on an aborted run.
 
 ### Shape
 

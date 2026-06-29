@@ -140,10 +140,15 @@ try:
      If it doesn't respond, ABORT (the trap still kills the PID and finally still runs).
 
   3. Drive Chrome via mcp__plugin_playwright_playwright__*:
+       - Create the gitignored evidence dir first (screenshots go here, never the repo root):
+           RUN_DIR="${mainRepoRoot}/tasks/qa-evidence/${ticketId}/$(date +%Y%m%d-%H%M%S)"; mkdir -p "$RUN_DIR"
        - Navigate to the baseUrl (preview URL or http://localhost:3000).
        - Walk the feature's primary path. When the change is i18n-relevant, walk it in
          BOTH locales: /es-AR/... and /en-US/... (i18n is a primary ICR regression surface).
-       - Capture screenshots at key states.
+       - Capture screenshots at key states. ALWAYS pass the **absolute** `$RUN_DIR/<name>.png`
+         to browser_take_screenshot — NEVER a bare filename. A bare name writes to the current
+         working directory (the repo root) and pollutes `git status`. `tasks/qa-evidence/` is
+         gitignored: shots persist locally for review and are safe to delete, but never committed.
        - Watch browser_console_messages for errors.
        - Exercise at least one edge case from the ticket.
        - If the likes feature is in scope, toggle a like in the browser and (only when a
@@ -206,7 +211,7 @@ Commit + push (inside the feature-branch worktree):
 
 - Flow exercised: <steps>
 - Locales walked: <es-AR / en-US, when i18n-relevant>
-- Screenshots: <list of paths>
+- Screenshots: <list of absolute paths, all under `tasks/qa-evidence/<ticket>/<run>/`>
 - Issues found: <list, or "none">
 
 ### New e2e spec (heavy only)
