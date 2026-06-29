@@ -2,6 +2,8 @@
 
 > **v2 update (ICR-83, 2026-06-25):** `agent-sandbox` is retired. `/predica` now creates the sermon as a **DRAFT in `production`**; a human reviews both locales and **Publishes** (Gate 2). The "merge agent-sandbox → master" step below is historical. See `docs/contentful-environments.md`.
 
+> **PDF-mirrors-post update (2026-06-29):** The PDF is no longer a separately-authored summary. The localized **`content[]` is the single body** — the writer produces it as a **medium (~800–1200 word) summary in the preacher's voice**, and the PDF renders that same body (cover → `content[]` → scripture references → footer). The old PDF-only fields (`lead`, `keyQuotes`, `scriptureHeadline`, `scriptureRefs`, `closing`) are **removed**; `thesis`/`mainPoints`/SEO are now metadata, not PDF drivers. Where this spec below says those fields "drive the PDF," read it as historical. See **`docs/predica-pdf-mirrors-post.md`** (authoritative) and the webhook regeneration spec **`tasks/specs/predica-pdf-regen-webhook.md`**.
+
 > **Status:** Draft for review · 2026-06-23
 > **Author:** Claude (brainstorming → spec)
 > **Feature:** Record a Sunday sermon → transcribe → generate a bilingual Contentful **draft** post (audio player + downloadable PDF summary, both languages) → produce a WhatsApp share message. Runs locally in the Claude Code harness (V1). Cloud automation is a documented V2 (appendix).

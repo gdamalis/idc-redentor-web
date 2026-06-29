@@ -3,23 +3,28 @@
  *
  * These are kept in src/ so Vitest can import them as TypeScript.
  * The Node ESM script at .claude/scripts/predica/build-predica-pdf.mjs
- * re-exports everything from here (transpiled at runtime via tsx/import).
+ * re-exports an equivalent JS implementation — keep the two in sync.
  *
  * All functions are pure (no side effects, no Playwright, no filesystem I/O).
+ *
+ * ── Single-source content model ──────────────────────────────────────────────
+ * The PDF renders the SAME body the reader/preacher sees and edits on the website
+ * (`SermonDetails.tsx`): the localized rich-text `content[]` plus the structured
+ * `scriptureReferences`. There is no separately-authored PDF summary anymore — the
+ * post body IS the PDF body, so the two can never drift and a Contentful edit can
+ * regenerate the PDF. `thesis`/`mainPoints`/SEO live on the entry as metadata, not
+ * in the PDF. See docs/predica-pdf-mirrors-post.md.
  */
+
+import type { ContentBlock, SermonScriptureRef } from "./sermonEntry";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-/** Per-locale content for a single sermon. */
+/** Per-locale content for a single sermon — the post body the PDF mirrors. */
 export interface SermonLocaleData {
   title: string;
-  lead: string;
-  thesis: string;
-  mainPoints: string[];
-  keyQuotes: string[];
-  scriptureHeadline?: string;
-  scriptureRefs: string[];
-  closing?: string;
+  /** The localized post body (same blocks rendered on the website). */
+  content: ContentBlock[];
 }
 
 /** Fields shared across both locales (from the top-level sermon.json). */
@@ -27,7 +32,11 @@ export interface SermonCommon {
   slug: string;
   sermonDate: string; // YYYY-MM-DD
   preacher: string;
+  /** Co-preachers for a multi-preacher service; the byline renders all of them. */
+  additionalPreachers?: string[];
   serviceLabel?: { "es-AR": string; "en-US": string };
+  /** Structured scripture references → the PDF's "Scripture references" section. */
+  scriptureReferences?: SermonScriptureRef[];
   /** Pre-inlined logo as a base64 data URI, e.g. "data:image/png;base64,..." */
   logoDataUri?: string;
 }
@@ -41,26 +50,20 @@ const LABELS = {
   "es-AR": {
     eyebrowSep: "·",
     preacher: "Predicó",
-    lead: "Introducción",
-    thesis: "Tesis",
-    mainPoints: "Puntos principales",
-    keyQuotes: "Citas clave",
     scripture: "Referencias bíblicas",
-    closing: "Cierre",
     footer: "Iglesia de Cristo Redentor",
     defaultService: "Culto dominical",
+    // Fixed, localized version label (mirrors the site's t("bibleVersion")) —
+    // shown instead of each verse's stored code (e.g. "RVR1960").
+    bibleVersion: "NVI",
   },
   "en-US": {
     eyebrowSep: "·",
     preacher: "Preached by",
-    lead: "Introduction",
-    thesis: "Thesis",
-    mainPoints: "Main points",
-    keyQuotes: "Key quotes",
     scripture: "Scripture references",
-    closing: "Closing",
     footer: "Iglesia de Cristo Redentor",
     defaultService: "Sunday service",
+    bibleVersion: "NIV",
   },
 } as const satisfies Record<SupportedLocale, Record<string, string>>;
 
@@ -101,17 +104,89 @@ export function formatSermonDate(dateStr: string, locale: SupportedLocale): stri
   }).format(date);
 }
 
+// ── Content body ──────────────────────────────────────────────────────────────
+
+/**
+ * Render the writer's content blocks to branded HTML, mirroring the website body
+ * (`SermonContent`): h2/h3/p/blockquote and ordered/unordered lists. `embeddedAsset`
+ * blocks (interactive per-segment audio/PDF players in multi-preacher posts) are
+ * skipped — they are meaningless in a printed PDF.
+ */
+export function renderContentBlocks(blocks: ContentBlock[]): string {
+  const e = escapeHtml;
+  return blocks
+    .map((block) => {
+      switch (block.type) {
+        case "h2":
+          return `<h2>${e(block.text ?? "")}</h2>`;
+        case "h3":
+          return `<h3>${e(block.text ?? "")}</h3>`;
+        case "p":
+          return `<p>${e(block.text ?? "")}</p>`;
+        case "blockquote":
+          return `<blockquote>${e(block.text ?? "")}</blockquote>`;
+        case "ul":
+          return `<ul>\n        ${(block.items ?? [])
+            .map((i) => `<li>${e(i)}</li>`)
+            .join("\n        ")}\n      </ul>`;
+        case "ol":
+          return `<ol>\n        ${(block.items ?? [])
+            .map((i) => `<li>${e(i)}</li>`)
+            .join("\n        ")}\n      </ol>`;
+        case "embeddedAsset":
+          return ""; // interactive players are dropped in print
+        default:
+          return "";
+      }
+    })
+    .filter(Boolean)
+    .join("\n      ");
+}
+
+/**
+ * Render the structured scripture references section, mirroring the website's
+ * `ScriptureReferences`: a per-locale "<book> <ch>:<from>[-<to>] (<NVI|NIV>)" line
+ * with the verse text as a quote. Uses the FIXED localized version label, not each
+ * verse's stored code. Returns "" when there are no references.
+ */
+export function renderScriptureReferences(
+  refs: SermonScriptureRef[] | undefined,
+  locale: SupportedLocale,
+): string {
+  if (!refs || refs.length === 0) return "";
+  const L = LABELS[locale];
+  const e = escapeHtml;
+  const items = refs
+    .map((ref) => {
+      const lv = ref[locale];
+      const verseRange = ref.toVerse ? `${ref.fromVerse}-${ref.toVerse}` : ref.fromVerse;
+      const refLine = `${lv.book} ${ref.chapter}:${verseRange} (${L.bibleVersion})`;
+      const verse = lv.verseContent
+        ? `\n          <blockquote class="verse">${e(lv.verseContent)}</blockquote>`
+        : "";
+      return `<li>\n          <span class="ref">${e(refLine)}</span>${verse}\n        </li>`;
+    })
+    .join("\n        ");
+  return `
+  <section class="scripture-refs">
+    <h2>${e(L.scripture)}</h2>
+    <ul>
+        ${items}
+    </ul>
+  </section>`;
+}
+
 // ── buildPdfHtml ──────────────────────────────────────────────────────────────
 
 /**
  * Build the full HTML document for one locale's sermon PDF.
  *
- * All dynamic values are passed through escapeHtml().
- * Sections that have no data (closing, scriptureHeadline) are simply omitted.
- * Chromium print-to-PDF will use @page rules embedded in the <style> block.
+ * Mirrors the website sermon page section order: cover (logo · date · title ·
+ * byline) → content body → scripture references → footer. All dynamic text goes
+ * through escapeHtml(). Chromium print-to-PDF uses the @page rules in <style>.
  *
- * @param localeData  - The locale-specific sermon content.
- * @param common      - Shared metadata (slug, date, preacher, logo).
+ * @param localeData  - The locale-specific post body (title + content[]).
+ * @param common      - Shared metadata (date, preacher(s), scripture refs, logo).
  * @param locale      - Which locale to render ("es-AR" | "en-US").
  * @returns           A complete HTML document string ready for Playwright setContent().
  */
@@ -122,40 +197,16 @@ export function buildPdfHtml(
 ): string {
   const L = LABELS[locale];
   const formattedDate = formatSermonDate(common.sermonDate, locale);
-  const serviceLabel =
-    common.serviceLabel?.[locale] ?? L.defaultService;
+  const serviceLabel = common.serviceLabel?.[locale] ?? L.defaultService;
 
   // All dynamic text goes through escapeHtml
   const e = escapeHtml;
   const title = e(localeData.title);
-  const lead = e(localeData.lead);
-  const thesis = e(localeData.thesis);
-  const preacher = e(common.preacher);
   const eyebrow = e(`${formattedDate} ${L.eyebrowSep} ${serviceLabel}`);
+  const byline = e([common.preacher, ...(common.additionalPreachers ?? [])].join(" · "));
 
-  const mainPointsHtml = localeData.mainPoints
-    .map((pt) => `<li>${e(pt)}</li>`)
-    .join("\n          ");
-
-  const keyQuotesHtml = localeData.keyQuotes
-    .map((q) => `<blockquote>${e(q)}</blockquote>`)
-    .join("\n          ");
-
-  const scriptureRefsHtml = localeData.scriptureRefs
-    .map((ref) => `<li>${e(ref)}</li>`)
-    .join("\n          ");
-
-  const scriptureHeadlineHtml = localeData.scriptureHeadline
-    ? `<p class="scripture-headline">${e(localeData.scriptureHeadline)}</p>`
-    : "";
-
-  const closingHtml = localeData.closing
-    ? `
-      <section class="closing">
-        <h2>${e(L.closing)}</h2>
-        <p>${e(localeData.closing)}</p>
-      </section>`
-    : "";
+  const bodyHtml = renderContentBlocks(localeData.content ?? []);
+  const scriptureHtml = renderScriptureReferences(common.scriptureReferences, locale);
 
   const logoHtml = common.logoDataUri
     ? `<img src="${common.logoDataUri}" alt="Logo Iglesia de Cristo Redentor" class="logo" />`
@@ -214,7 +265,8 @@ export function buildPdfHtml(
     }
 
     h1 { font-size: 26pt; font-weight: 700; color: var(--color-slate); }
-    h2 { font-size: 13pt; font-weight: 600; color: var(--color-primary); margin-top: 1.6em; }
+    h2 { font-size: 14pt; font-weight: 600; color: var(--color-primary); margin-top: 1.5em; }
+    h3 { font-size: 11.5pt; font-weight: 600; color: var(--color-slate); margin-top: 1.2em; }
 
     /* ── Cover ── */
     .cover {
@@ -253,14 +305,6 @@ export function buildPdfHtml(
       margin-bottom: 0.3em;
     }
 
-    .scripture-headline {
-      font-family: 'Playfair Display', Georgia, serif;
-      font-style: italic;
-      font-size: 11.5pt;
-      color: var(--color-accent);
-      margin: 0.5em 0 0.75em;
-    }
-
     .preacher-line {
       font-size: 9.5pt;
       color: var(--color-muted);
@@ -278,70 +322,65 @@ export function buildPdfHtml(
       width: 60%;
     }
 
-    /* ── Body sections ── */
-    section {
-      margin-top: 1.4em;
+    /* ── Body (mirrors the website sermon body) ── */
+    .body {
+      margin-top: 0.5em;
     }
 
     p {
       margin: 0 0 0.75em;
     }
 
-    /* ── Thesis callout ── */
-    .thesis-box {
-      background: var(--color-sand);
-      border-left: 4px solid var(--color-primary);
-      padding: 0.85em 1.1em;
-      border-radius: 3px;
-      margin-top: 0.5em;
-      break-inside: avoid;
-    }
-
-    .thesis-box p {
-      margin: 0;
-      font-size: 11pt;
-      font-style: italic;
-      font-family: 'Playfair Display', Georgia, serif;
-    }
-
-    /* ── Main points list ── */
-    .main-points ul {
-      margin: 0.4em 0 0;
-      padding-left: 1.5em;
-    }
-
-    .main-points li {
-      margin-bottom: 0.35em;
-      break-inside: avoid;
-    }
-
-    /* ── Key quotes ── */
-    .key-quotes blockquote {
+    .body blockquote {
       border-left: 3px solid var(--color-accent);
-      margin: 0.6em 0;
-      padding: 0.5em 0.9em;
+      margin: 0.8em 0;
+      padding: 0.4em 0.95em;
       font-style: italic;
       font-family: 'Playfair Display', Georgia, serif;
       color: var(--color-slate);
       break-inside: avoid;
     }
 
-    /* ── Scripture references ── */
-    .scripture-refs ul {
-      margin: 0.4em 0 0;
+    .body ul, .body ol {
+      margin: 0.4em 0 0.9em;
       padding-left: 1.5em;
     }
 
-    .scripture-refs li {
-      font-size: 9.5pt;
-      color: var(--color-muted);
-      margin-bottom: 0.25em;
+    .body li {
+      margin-bottom: 0.35em;
       break-inside: avoid;
     }
 
-    /* ── Closing ── */
-    .closing p {
+    /* ── Scripture references ── */
+    .scripture-refs {
+      margin-top: 1.8em;
+    }
+
+    .scripture-refs ul {
+      list-style: none;
+      margin: 0.4em 0 0;
+      padding: 0;
+    }
+
+    .scripture-refs li {
+      margin-bottom: 0.7em;
+      break-inside: avoid;
+    }
+
+    .scripture-refs .ref {
+      display: block;
+      font-size: 9.5pt;
+      font-weight: 600;
+      color: var(--color-slate);
+    }
+
+    .scripture-refs .verse {
+      border-left: 2px solid var(--color-primary);
+      margin: 0.25em 0 0;
+      padding: 0.1em 0.7em;
+      font-size: 9.5pt;
       font-style: italic;
+      color: var(--color-muted);
     }
 
     /* ── Footer signature ── */
@@ -364,48 +403,17 @@ export function buildPdfHtml(
     ${logoHtml}
     <p class="eyebrow">${eyebrow}</p>
     <h1>${title}</h1>
-    ${scriptureHeadlineHtml}
     <p class="preacher-line">
-      <span class="preacher-label">${e(L.preacher)}:</span> ${preacher}
+      <span class="preacher-label">${e(L.preacher)}:</span> ${byline}
     </p>
     <hr class="cover-rule" />
   </div>
 
-  <!-- ── Lead ── -->
-  <section class="lead">
-    <p>${lead}</p>
-  </section>
-
-  <!-- ── Thesis ── -->
-  <section class="thesis">
-    <h2>${e(L.thesis)}</h2>
-    <div class="thesis-box">
-      <p>${thesis}</p>
-    </div>
-  </section>
-
-  <!-- ── Main points ── -->
-  <section class="main-points">
-    <h2>${e(L.mainPoints)}</h2>
-    <ul>
-          ${mainPointsHtml}
-    </ul>
-  </section>
-
-  <!-- ── Key quotes ── -->
-  <section class="key-quotes">
-    <h2>${e(L.keyQuotes)}</h2>
-          ${keyQuotesHtml}
-  </section>
-
-  <!-- ── Scripture references ── -->
-  <section class="scripture-refs">
-    <h2>${e(L.scripture)}</h2>
-    <ul>
-          ${scriptureRefsHtml}
-    </ul>
-  </section>
-  ${closingHtml}
+  <!-- ── Body ── -->
+  <main class="body">
+      ${bodyHtml}
+  </main>
+  ${scriptureHtml}
 
   <!-- ── Footer signature ── -->
   <div class="footer-sig">

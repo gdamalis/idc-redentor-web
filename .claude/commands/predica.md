@@ -121,7 +121,8 @@ Then **validate + reconcile** (Bash):
   dir to it and update `slugDir`; re-run the PDF/publisher against the canonical paths. The date prefix is
   **only** for local folder organization — `sermon.json.slug` stays the **bare** canonical slug (no date),
   and that bare slug alone drives the Contentful `fields.slug` and the public URL `/es-AR/predicas/<slug>`.
-- Show the user a one-glance sanity line: title (es/en), thesis, main points, key quotes, scripture refs.
+- Show the user a one-glance sanity line: title (es/en), `content[]` block count + approx word count (the
+  body is a ~800–1200 word summary that the PDF mirrors), and scripture refs.
 
 ## 3.5 ★ HUMAN GATE 0 — already in Contentful? (regenerate-in-place) ★
 

@@ -76,9 +76,14 @@ export interface SermonScriptureRef {
   "en-US": ScriptureRefLocale;
 }
 
-/** Per-locale sermon content (superset of the PDF + Contentful fields). */
+/**
+ * Per-locale sermon content. Every field maps to the Contentful `sermon` entry.
+ * `content[]` is the single canonical body: it drives BOTH the website post and the
+ * branded PDF (the PDF renders the same blocks — see src/utils/predica/helpers.ts and
+ * docs/predica-pdf-mirrors-post.md). `thesis`/`mainPoints`/SEO are metadata (cards,
+ * SEO, related), not the PDF body.
+ */
 export interface SermonLocaleContent {
-  // Contentful-mapped
   title: string;
   thesis: string;
   mainPoints: string[];
@@ -87,12 +92,6 @@ export interface SermonLocaleContent {
   seoDescription: string;
   keywords: string[];
   content: ContentBlock[];
-  // PDF-only (consumed by build-predica-pdf.mjs, not mapped to Contentful)
-  lead?: string;
-  keyQuotes?: string[];
-  scriptureHeadline?: string;
-  scriptureRefs?: string[];
-  closing?: string;
 }
 
 /** The canonical sermon.json document. */

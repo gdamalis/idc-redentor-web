@@ -1,9 +1,14 @@
 /**
  * Unit tests for the sermon PDF generator pure helpers.
  * Exercises escapeHtml, formatSermonDate, and buildPdfHtml without invoking Playwright.
+ *
+ * The PDF mirrors the website post body: cover → content[] body → scripture
+ * references → footer (see helpers.ts / docs/predica-pdf-mirrors-post.md).
  */
 import { describe, it, expect, beforeEach } from "vitest";
 import { escapeHtml, formatSermonDate, buildPdfHtml } from "@src/utils/predica/helpers";
+import type { SermonCommon, SermonLocaleData } from "@src/utils/predica/helpers";
+import type { ContentBlock, SermonScriptureRef } from "@src/utils/predica/sermonEntry";
 
 // ── escapeHtml ────────────────────────────────────────────────────────────────
 
@@ -53,7 +58,6 @@ describe("escapeHtml", () => {
 describe("formatSermonDate", () => {
   it("formats a date in es-AR as Spanish long form (7 de junio de 2026)", () => {
     const result = formatSermonDate("2026-06-07", "es-AR");
-    // Should contain the day number, month name in Spanish, and year
     expect(result).toMatch(/7/);
     expect(result.toLowerCase()).toMatch(/junio/);
     expect(result).toMatch(/2026/);
@@ -82,34 +86,48 @@ describe("formatSermonDate", () => {
 
 // ── buildPdfHtml ──────────────────────────────────────────────────────────────
 
-const COMMON_FIXTURE = {
+// Stored bibleVersion is deliberately a non-NVI/NIV code to prove the PDF shows
+// the FIXED localized label (NVI / NIV), mirroring the website ScriptureReferences.
+const SCRIPTURE_FIXTURE: SermonScriptureRef[] = [
+  {
+    chapter: "2",
+    fromVerse: "11",
+    toVerse: "22",
+    "es-AR": { book: "Efesios", verseContent: "Por tanto, recuerden ustedes...", bibleVersion: "RVR1960" },
+    "en-US": { book: "Ephesians", verseContent: "Therefore, remember that...", bibleVersion: "ESV" },
+  },
+];
+
+const COMMON_FIXTURE: SermonCommon = {
   slug: "test-sermon",
   sermonDate: "2026-06-07",
   preacher: "Jonathan Hanegan",
+  additionalPreachers: ["Gabriel Damalis", "Eric Prato"],
   serviceLabel: { "es-AR": "Culto dominical", "en-US": "Sunday service" },
+  scriptureReferences: SCRIPTURE_FIXTURE,
   logoDataUri: "data:image/png;base64,iVBORw0KGgo=",
 };
 
-const ES_LOCALE_DATA = {
+const ES_LOCALE_DATA: SermonLocaleData = {
   title: "El amor que derriba muros",
-  lead: "Dios reconcilia a toda la humanidad.",
-  thesis: "Cristo es nuestra paz que rompe toda barrera.",
-  mainPoints: ["La división humana", "La obra reconciliadora", "El llamado a la unidad"],
-  keyQuotes: ["«Porque él es nuestra paz» · Efesios 2:14"],
-  scriptureHeadline: "«Él es nuestra paz» · Efesios 2:14",
-  scriptureRefs: ["Efesios 2:11-22 (RVR1960)"],
-  closing: "Que seamos un pueblo unido.",
+  content: [
+    { type: "h2", text: "La división humana" },
+    { type: "p", text: "Dios reconcilia a toda la humanidad." },
+    { type: "blockquote", text: "«Porque él es nuestra paz» — Efesios 2:14 (NVI)" },
+    { type: "h3", text: "El llamado a la unidad" },
+    { type: "ul", items: ["Primera idea", "Segunda idea"] },
+    { type: "embeddedAsset", assetId: "AUDIO_ASSET_1" },
+  ],
 };
 
-const EN_LOCALE_DATA = {
+const EN_LOCALE_DATA: SermonLocaleData = {
   title: "The love that breaks down walls",
-  lead: "God reconciles all of humanity.",
-  thesis: "Christ is our peace who breaks every barrier.",
-  mainPoints: ["Human division", "The reconciling work", "The call to unity"],
-  keyQuotes: ['"For he himself is our peace" · Ephesians 2:14'],
-  scriptureHeadline: '"He himself is our peace" · Ephesians 2:14',
-  scriptureRefs: ["Ephesians 2:11-22 (NIV)"],
-  closing: "May we be a united people.",
+  content: [
+    { type: "h2", text: "Human division" },
+    { type: "p", text: "God reconciles all of humanity." },
+    { type: "blockquote", text: "“For he himself is our peace” — Ephesians 2:14 (NIV)" },
+    { type: "ol", items: ["First idea", "Second idea"] },
+  ],
 };
 
 describe("buildPdfHtml — es-AR", () => {
@@ -133,101 +151,87 @@ describe("buildPdfHtml — es-AR", () => {
     expect(html).toContain("El amor que derriba muros");
   });
 
-  it("includes the escaped thesis text", () => {
-    expect(html).toContain("Cristo es nuestra paz que rompe toda barrera.");
+  it("renders the content body blocks (h2/p/blockquote/h3/list)", () => {
+    expect(html).toContain("<h2>La división humana</h2>");
+    expect(html).toContain("<p>Dios reconcilia a toda la humanidad.</p>");
+    expect(html).toContain("<blockquote>«Porque él es nuestra paz» — Efesios 2:14 (NVI)</blockquote>");
+    expect(html).toContain("<h3>El llamado a la unidad</h3>");
+    expect(html).toContain("<li>Primera idea</li>");
+    expect(html).toContain("<li>Segunda idea</li>");
   });
 
-  it("includes all main points", () => {
-    expect(html).toContain("La división humana");
-    expect(html).toContain("La obra reconciliadora");
-    expect(html).toContain("El llamado a la unidad");
+  it("omits embeddedAsset blocks (interactive players are dropped in print)", () => {
+    expect(html).not.toContain("AUDIO_ASSET_1");
+    expect(html).not.toContain("embedded-asset");
   });
 
-  it("includes the key quote", () => {
-    expect(html).toContain("«Porque él es nuestra paz» · Efesios 2:14");
+  it("renders scripture references with the fixed NVI label and verse text", () => {
+    expect(html).toContain("Efesios 2:11-22 (NVI)");
+    expect(html).toContain("Por tanto, recuerden ustedes...");
+    // Never the stored per-verse code.
+    expect(html).not.toContain("RVR1960");
   });
 
-  it("includes the scripture reference", () => {
-    expect(html).toContain("Efesios 2:11-22 (RVR1960)");
+  it("renders the full byline including co-preachers, joined by ' · '", () => {
+    expect(html).toContain("Jonathan Hanegan · Gabriel Damalis · Eric Prato");
   });
 
-  it("includes the closing", () => {
-    expect(html).toContain("Que seamos un pueblo unido.");
-  });
-
-  it("uses Spanish section labels (Tesis, Puntos principales, Citas clave, Referencias)", () => {
-    expect(html).toMatch(/Tesis/);
-    expect(html).toMatch(/Puntos principales/i);
-    expect(html).toMatch(/Citas clave/i);
-    expect(html).toMatch(/Referencias bíblicas/i);
-  });
-
-  it("uses Spanish preacher label (Predicó)", () => {
+  it("uses Spanish labels (Predicó, Referencias bíblicas) and drops the old summary sections", () => {
     expect(html).toMatch(/Predicó/);
-    expect(html).toContain("Jonathan Hanegan");
+    expect(html).toMatch(/Referencias bíblicas/i);
+    expect(html).not.toMatch(/Tesis/);
+    expect(html).not.toMatch(/Puntos principales/);
+    expect(html).not.toMatch(/Citas clave/);
   });
 
-  it("includes the formatted date in Spanish long form", () => {
-    // The cover should show the formatted date for es-AR
+  it("includes the formatted date in Spanish long form and the service label", () => {
     expect(html.toLowerCase()).toMatch(/junio/);
     expect(html).toMatch(/2026/);
-  });
-
-  it("includes the service label in Spanish", () => {
     expect(html).toContain("Culto dominical");
   });
 
   it("includes the logo as a data URI img tag", () => {
-    expect(html).toContain('data:image/png;base64,iVBORw0KGgo=');
+    expect(html).toContain("data:image/png;base64,iVBORw0KGgo=");
   });
 
   it("includes the Iglesia de Cristo Redentor footer signature", () => {
     expect(html).toContain("Iglesia de Cristo Redentor");
   });
 
-  it("escapes HTML-special characters that appear in the title", () => {
-    const injectionData = {
-      ...ES_LOCALE_DATA,
-      title: '<script>alert("xss")</script>',
-      thesis: "Safe thesis",
-    };
-    const injected = buildPdfHtml(injectionData, COMMON_FIXTURE, "es-AR");
-    expect(injected).not.toContain("<script>");
+  it("escapes HTML-special characters in the title", () => {
+    const injected = buildPdfHtml(
+      { ...ES_LOCALE_DATA, title: '<script>alert("xss")</script>' },
+      COMMON_FIXTURE,
+      "es-AR",
+    );
+    expect(injected).not.toContain("<script>alert");
     expect(injected).toContain("&lt;script&gt;");
   });
 
-  it("escapes HTML-special characters in thesis", () => {
-    const injectionData = {
-      ...ES_LOCALE_DATA,
-      thesis: "A & B > C",
-    };
-    const injected = buildPdfHtml(injectionData, COMMON_FIXTURE, "es-AR");
-    expect(injected).not.toContain("A & B > C");
+  it("escapes HTML-special characters inside content blocks", () => {
+    const injectedContent: ContentBlock[] = [
+      { type: "p", text: "A & B > C" },
+      { type: "ul", items: ["Point with <b>tag</b>"] },
+    ];
+    const injected = buildPdfHtml(
+      { ...ES_LOCALE_DATA, content: injectedContent },
+      COMMON_FIXTURE,
+      "es-AR",
+    );
     expect(injected).toContain("A &amp; B &gt; C");
-  });
-
-  it("escapes HTML-special characters in main points", () => {
-    const injectionData = {
-      ...ES_LOCALE_DATA,
-      mainPoints: ['Point with <b>tag</b>'],
-    };
-    const injected = buildPdfHtml(injectionData, COMMON_FIXTURE, "es-AR");
     expect(injected).not.toContain("<b>tag</b>");
     expect(injected).toContain("&lt;b&gt;tag&lt;/b&gt;");
   });
 
-  it("omits closing section when closing is not provided", () => {
-    const noClosing = { ...ES_LOCALE_DATA, closing: undefined };
-    const rendered = buildPdfHtml(noClosing, COMMON_FIXTURE, "es-AR");
-    // Should not crash and should not contain the es closing text
-    expect(rendered).not.toContain("Que seamos un pueblo unido.");
+  it("omits the scripture section entirely when there are no references", () => {
+    const noRefs = buildPdfHtml(ES_LOCALE_DATA, { ...COMMON_FIXTURE, scriptureReferences: [] }, "es-AR");
+    expect(noRefs).not.toContain("Referencias bíblicas");
   });
 
-  it("omits scriptureHeadline when not provided", () => {
-    const noHeadline = { ...ES_LOCALE_DATA, scriptureHeadline: undefined };
-    const rendered = buildPdfHtml(noHeadline, COMMON_FIXTURE, "es-AR");
-    // Should not crash; the scriptureHeadline text must be absent
-    expect(rendered).not.toContain("«Él es nuestra paz» · Efesios 2:14");
+  it("renders only the primary preacher when there are no co-preachers", () => {
+    const solo = buildPdfHtml(ES_LOCALE_DATA, { ...COMMON_FIXTURE, additionalPreachers: undefined }, "es-AR");
+    expect(solo).toContain("Jonathan Hanegan");
+    expect(solo).not.toContain("Gabriel Damalis");
   });
 });
 
@@ -238,32 +242,27 @@ describe("buildPdfHtml — en-US", () => {
     html = buildPdfHtml(EN_LOCALE_DATA, COMMON_FIXTURE, "en-US");
   });
 
-  it("uses English section labels (Thesis, Main points, Key quotes, Scripture)", () => {
-    expect(html).toMatch(/Thesis/i);
-    expect(html).toMatch(/Main points/i);
-    expect(html).toMatch(/Key quotes/i);
-    expect(html).toMatch(/Scripture/i);
-  });
-
-  it("uses English preacher label (Preached by)", () => {
+  it("uses English labels (Preached by, Scripture references)", () => {
     expect(html).toMatch(/Preached by/i);
-    expect(html).toContain("Jonathan Hanegan");
+    expect(html).toMatch(/Scripture references/i);
   });
 
-  it("includes the formatted date in English long form (June)", () => {
+  it("includes the formatted date in English long form (June) and the service label", () => {
     expect(html).toMatch(/June/i);
     expect(html).toMatch(/2026/);
-  });
-
-  it("includes the service label in English", () => {
     expect(html).toContain("Sunday service");
   });
 
-  it("includes the English title", () => {
+  it("renders the English title and content body", () => {
     expect(html).toContain("The love that breaks down walls");
+    expect(html).toContain("<h2>Human division</h2>");
+    expect(html).toContain("<p>God reconciles all of humanity.</p>");
+    expect(html).toContain("<li>First idea</li>");
   });
 
-  it("includes the English thesis", () => {
-    expect(html).toContain("Christ is our peace who breaks every barrier.");
+  it("renders scripture references with the fixed NIV label and English book/verse", () => {
+    expect(html).toContain("Ephesians 2:11-22 (NIV)");
+    expect(html).toContain("Therefore, remember that...");
+    expect(html).not.toContain("ESV");
   });
 });
