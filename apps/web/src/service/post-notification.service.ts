@@ -71,7 +71,7 @@ async function notifyLocale(
       content,
       locale,
     });
-    const broadcastId = `${handler.kind}:${content.slug}:${locale}`;
+    const broadcastId = `${handler.kind}:${entryId}:${locale}`;
     const result = await sendBroadcast({ broadcastId, subject, html, text, locale });
     return { locale, status: result.status, reason: result.reason };
   } catch (e) {

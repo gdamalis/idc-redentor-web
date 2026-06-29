@@ -30,7 +30,7 @@ describe("notifyOnPublish", () => {
     expect(sendBroadcast).not.toHaveBeenCalled();
   });
 
-  it("sends one broadcast per configured locale with content, using kind:slug:locale", async () => {
+  it("sends one broadcast per configured locale with content, using kind:entryId:locale", async () => {
     vi.mocked(isResendBroadcastConfigured).mockReturnValue(true);
     vi.mocked(getBlogPostPageById).mockImplementation(async (_id, locale) =>
       blog({ title: locale === "es-AR" ? "Hola" : "Hello" }),
@@ -39,10 +39,10 @@ describe("notifyOnPublish", () => {
     const out = await notifyOnPublish({ contentTypeId: "blogPostPage", entryId: "e1" });
     expect(sendBroadcast).toHaveBeenCalledTimes(2);
     expect(sendBroadcast).toHaveBeenCalledWith(
-      expect.objectContaining({ broadcastId: "blog:hola:es-AR", locale: "es-AR" }),
+      expect.objectContaining({ broadcastId: "blog:e1:es-AR", locale: "es-AR" }),
     );
     expect(sendBroadcast).toHaveBeenCalledWith(
-      expect.objectContaining({ broadcastId: "blog:hola:en-US", locale: "en-US" }),
+      expect.objectContaining({ broadcastId: "blog:e1:en-US", locale: "en-US" }),
     );
     expect(out.handled).toBe(true);
   });
@@ -76,13 +76,13 @@ describe("notifyOnPublish", () => {
     expect(out.perLocale.some((p) => p.status === "failed")).toBe(true);
   });
 
-  it("uses the sermon getter + sermon:slug:locale id", async () => {
+  it("uses the sermon getter + sermon:entryId:locale id", async () => {
     vi.mocked(isResendBroadcastConfigured).mockReturnValue(true);
     vi.mocked(getSermonById).mockResolvedValue(sermon());
     vi.mocked(sendBroadcast).mockResolvedValue({ status: "sent" });
     await notifyOnPublish({ contentTypeId: "sermon", entryId: "e1" });
     expect(sendBroadcast).toHaveBeenCalledWith(
-      expect.objectContaining({ broadcastId: "sermon:s:es-AR" }),
+      expect.objectContaining({ broadcastId: "sermon:e1:es-AR" }),
     );
   });
 });
