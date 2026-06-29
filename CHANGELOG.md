@@ -1,3 +1,9 @@
+# [1.22.0](https://github.com/gdamalis/idc-redentor-web/compare/v1.21.1...v1.22.0) (2026-06-29)
+
+### Features
+
+- **ICR-44:** email newly published blog posts and sermons to subscribers (locale-aware) ([#72](https://github.com/gdamalis/idc-redentor-web/issues/72)) ([ddc0d3b](https://github.com/gdamalis/idc-redentor-web/commit/ddc0d3ba8d35beaf61178bd133a76e30e57ec90f))
+
 ## [1.21.1](https://github.com/gdamalis/idc-redentor-web/compare/v1.21.0...v1.21.1) (2026-06-29)
 
 ### Bug Fixes

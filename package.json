@@ -1,6 +1,6 @@
 {
   "name": "idc-redentor-monorepo",
-  "version": "1.21.1",
+  "version": "1.22.0",
   "private": true,
   "packageManager": "pnpm@10.33.0",
   "scripts": {
