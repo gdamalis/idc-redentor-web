@@ -94,12 +94,12 @@ React Components push events via:
 
 These are the 4 custom events implemented in the codebase. Each event is pushed to the dataLayer only when the specific user action succeeds.
 
-| Event Name              | When It Fires                                            | Parameters                                                                               | Source Components                          |
-| ----------------------- | -------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------ |
-| `newsletter_subscribe`  | After subscribe API returns success                      | `subscribe_location` (`"banner"` or `"footer_form"`), `page_path`                        | `SubscribeBanner.tsx`, `SubscribeForm.tsx` |
-| `contact_form_submit`   | After contact form server action returns `success: true` | `form_subject` (the selected dropdown value)                                             | `ContactForm.tsx`                          |
-| `join_us_click`         | When user clicks any "Join Us" CTA button                | `click_location` (`"navbar"`, `"navbar_mobile"`, or `"hero_cta"`), `page_path`           | `Navbar.tsx`, `OurMissionCta.tsx`          |
-| `related_article_click` | When user clicks a related article link from a blog post | `source_article` (current slug), `target_article` (clicked slug), `target_article_title` | `RelatedArticleLink.tsx`                   |
+| Event Name              | When It Fires                                            | Parameters                                                                               | Source Components                 |
+| ----------------------- | -------------------------------------------------------- | ---------------------------------------------------------------------------------------- | --------------------------------- |
+| `newsletter_subscribe`  | After subscribe API returns success                      | `subscribe_location` (`"banner"`), `page_path`                                           | `SubscribeBanner.tsx`             |
+| `contact_form_submit`   | After contact form server action returns `success: true` | `form_subject` (the selected dropdown value)                                             | `ContactForm.tsx`                 |
+| `join_us_click`         | When user clicks any "Join Us" CTA button                | `click_location` (`"navbar"`, `"navbar_mobile"`, or `"hero_cta"`), `page_path`           | `Navbar.tsx`, `OurMissionCta.tsx` |
+| `related_article_click` | When user clicks a related article link from a blog post | `source_article` (current slug), `target_article` (clicked slug), `target_article_title` | `RelatedArticleLink.tsx`          |
 
 ---
 

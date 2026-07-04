@@ -83,8 +83,8 @@ src/app/api/subscribe/route.ts
 ```
 
 - There is no database row for subscribers — they live only in the managed Resend Audiences.
-- The route is **locale-aware**: `SubscribeBanner.tsx` and `SubscribeForm.tsx` call `useLocale()` and
-  pass the result to `subscribe(email, locale)`, which POSTs `{ email, locale }`. The route Zod-validates
+- The route is **locale-aware**: `SubscribeBanner.tsx` calls `useLocale()` and
+  passes the result to `subscribe(email, locale)`, which POSTs `{ email, locale }`. The route Zod-validates
   the pair and routes the contact to the matching Resend audience via `addSubscriber`.
 - On failure the route returns a stable `messageKey` (one of `SubscribeBannerKey` from
   `src/components/shared/subscribe-banner/subscribeBannerMessageKeys.ts`). `src/service/subscribe.ts`
