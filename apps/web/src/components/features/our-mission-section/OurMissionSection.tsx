@@ -9,12 +9,17 @@ import {
   cardDescriptionOptions,
 } from "@lib/contentful/rich-text-options";
 import type { ContentCollection } from "@lib/contentful/types";
+import type { InspectorProps } from "@src/components/shared/contentful-preview/useLivePreview";
 
 interface OurMissionSectionProps {
   content: ContentCollection;
+  inspectorProps?: InspectorProps;
 }
 
-export const OurMissionSection = ({ content }: OurMissionSectionProps) => {
+export const OurMissionSection = ({
+  content,
+  inspectorProps,
+}: OurMissionSectionProps) => {
   const description = content.description
     ? documentToReactComponents(
         content.description.json,
@@ -25,7 +30,17 @@ export const OurMissionSection = ({ content }: OurMissionSectionProps) => {
   return (
     <section className="py-24 bg-background">
       <Container>
-        <SectionHeader title={content.title} description={description} />
+        {/* SectionHeader doesn't forward extra props to its DOM node — wrap it
+            so the inspector attributes still reach the DOM without touching
+            SectionHeader's API (it's shared by other callers). */}
+        <div
+          {...inspectorProps?.({
+            entryId: content.sys?.id ?? "",
+            fieldId: "title",
+          })}
+        >
+          <SectionHeader title={content.title} description={description} />
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {content.creedItems.map((item, index) => (
@@ -37,15 +52,28 @@ export const OurMissionSection = ({ content }: OurMissionSectionProps) => {
               transition={{ delay: index * 0.2 }}
               className="bg-card p-8 rounded-2xl border border-border shadow-sm hover:shadow-md transition-all hover:-translate-y-1 group"
             >
-              <h3 className="font-serif text-2xl font-bold mb-3">
+              <h3
+                className="font-serif text-2xl font-bold mb-3"
+                {...inspectorProps?.({
+                  entryId: item.sys?.id ?? "",
+                  fieldId: "title",
+                })}
+              >
                 {item.title}
               </h3>
 
-              {item.description &&
-                documentToReactComponents(
-                  item.description.json,
-                  cardDescriptionOptions,
-                )}
+              <div
+                {...inspectorProps?.({
+                  entryId: item.sys?.id ?? "",
+                  fieldId: "description",
+                })}
+              >
+                {item.description &&
+                  documentToReactComponents(
+                    item.description.json,
+                    cardDescriptionOptions,
+                  )}
+              </div>
             </motion.div>
           ))}
         </div>

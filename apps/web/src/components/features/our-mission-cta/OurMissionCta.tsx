@@ -11,6 +11,7 @@ import Image from "next/image";
 import { ReactNode } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@src/components/ui/button";
+import type { InspectorProps } from "@src/components/shared/contentful-preview/useLivePreview";
 import { useTranslations } from "next-intl";
 import { trackEvent } from "@src/lib/analytics";
 
@@ -58,17 +59,22 @@ type OurMissionCtaProps = {
       title: string;
       url: string;
     };
+    sys: { id: string };
   };
+  inspectorProps?: InspectorProps;
 };
 
-export const OurMissionCta = ({ content }: OurMissionCtaProps) => {
+export const OurMissionCta = ({ content, inspectorProps }: OurMissionCtaProps) => {
   const t = useTranslations("OurMissionCta");
   const bodyText = documentToReactComponents(content.body.json, options);
 
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Background Image with Parallax-like effect */}
-      <div className="absolute inset-0 z-0">
+      <div
+        className="absolute inset-0 z-0"
+        {...inspectorProps?.({ entryId: content.sys.id, fieldId: "image" })}
+      >
         <Image
           src={content.image.url}
           alt={content.image.title}
@@ -99,14 +105,30 @@ export const OurMissionCta = ({ content }: OurMissionCtaProps) => {
             variants={fadeInUp}
             className="font-serif text-5xl md:text-7xl font-bold leading-tight"
           >
-            {content.headline}
+            <span
+              {...inspectorProps?.({
+                entryId: content.sys.id,
+                fieldId: "headline",
+              })}
+            >
+              {content.headline}
+            </span>
             <br />
-            <span className="italic">{content.subHeadline}</span>
+            <span
+              className="italic"
+              {...inspectorProps?.({
+                entryId: content.sys.id,
+                fieldId: "subHeadline",
+              })}
+            >
+              {content.subHeadline}
+            </span>
           </motion.h1>
 
-          <motion.div 
+          <motion.div
             variants={fadeInUp}
             className="max-w-3xl mx-auto backdrop-blur-sm bg-black/20 p-6 rounded-2xl border border-white/10"
+            {...inspectorProps?.({ entryId: content.sys.id, fieldId: "body" })}
           >
             {bodyText}
           </motion.div>
@@ -133,6 +155,10 @@ export const OurMissionCta = ({ content }: OurMissionCtaProps) => {
               <Button
                 size="lg"
                 className="rounded-full px-8 text-lg h-14 bg-black/20 hover:bg-white/20 text-white border-white/20 backdrop-blur-sm [text-shadow:_0_2px_8px_rgb(0_0_0_/_60%)]"
+                {...inspectorProps?.({
+                  entryId: content.sys.id,
+                  fieldId: "ctaText",
+                })}
               >
                 {content.ctaText}
               </Button>

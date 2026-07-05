@@ -14,6 +14,7 @@ export function mapContentCollection(
     description: raw?.description,
     creedItems: raw?.contentItemsCollection?.items,
     image: raw?.image,
+    sys: raw?.sys,
   };
 
   return mapped;

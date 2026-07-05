@@ -6,9 +6,18 @@ import { getHeroBannerComponent } from "@lib/contentful/getHeroBannerComponent";
 import { mapContentCollection } from "@lib/contentful/mapContentCollection";
 import { buildPageMetadata } from "@lib/metadata";
 import { BlogSection } from "@src/components/features/blog-section";
-import { ComponentCta } from "@src/components/features/component-cta";
-import { OurMissionCta } from "@src/components/features/our-mission-cta";
-import { OurMissionSection } from "@src/components/features/our-mission-section";
+import {
+  ComponentCta,
+  ComponentCtaLive,
+} from "@src/components/features/component-cta";
+import {
+  OurMissionCta,
+  OurMissionCtaLive,
+} from "@src/components/features/our-mission-cta";
+import {
+  OurMissionSection,
+  OurMissionSectionLive,
+} from "@src/components/features/our-mission-section";
 import { type Metadata } from "next";
 import { setRequestLocale } from "next-intl/server";
 
@@ -51,10 +60,24 @@ export default async function Home({
 
   return (
     <main>
-      <OurMissionCta content={ourMission} />
-      <OurMissionSection content={mapContentCollection(ourMissionCollection)} />
+      {isEnabled ? (
+        <OurMissionCtaLive raw={ourMission} locale={locale} />
+      ) : (
+        <OurMissionCta content={ourMission} />
+      )}
+      {isEnabled ? (
+        <OurMissionSectionLive raw={ourMissionCollection} locale={locale} />
+      ) : (
+        <OurMissionSection
+          content={mapContentCollection(ourMissionCollection)}
+        />
+      )}
       <BlogSection posts={latestPosts} />
-      <ComponentCta content={contactCta} />
+      {isEnabled ? (
+        <ComponentCtaLive raw={contactCta} locale={locale} />
+      ) : (
+        <ComponentCta content={contactCta} />
+      )}
     </main>
   );
 }

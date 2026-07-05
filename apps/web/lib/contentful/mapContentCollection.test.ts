@@ -58,6 +58,14 @@ describe("mapContentCollection", () => {
     expect(result.creedItems).toBe(raw.contentItemsCollection.items);
   });
 
+  it("preserves the collection's own sys.id (for the inspector's entryId)", () => {
+    const raw = makeRaw([BELIEF_ITEM_1]);
+
+    const result = mapContentCollection(raw);
+
+    expect(result.sys).toEqual({ id: "collection-1" });
+  });
+
   it("preserves each beliefItem's fields (title, description, bibleVerse, image, kind, sys, __typename)", () => {
     const raw = makeRaw([BELIEF_ITEM_1]);
 

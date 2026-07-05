@@ -39,6 +39,7 @@ export interface ContentCollection {
   title: string;
   description: RichTextField;
   creedItems: ContentItem[];
+  sys?: { id: string };
 }
 
 // The raw GraphQL node returned by getContentCollection (unmapped). image is
