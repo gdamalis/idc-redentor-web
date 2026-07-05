@@ -31,12 +31,27 @@ export interface ContentItem {
   bibleVerse?: StructuredBibleVerse | null;
   image?: ContentfulImage;
   kind?: BeliefKind;
+  sys?: { id: string };
+  __typename?: string;
 }
 
 export interface ContentCollection {
   title: string;
   description: RichTextField;
   creedItems: ContentItem[];
+}
+
+// The raw GraphQL node returned by getContentCollection (unmapped). image is
+// declared for parity with the mapper's output shape, but the query never
+// requests a top-level `image` field on ContentCollection — it is always
+// undefined today. See mapContentCollection.ts.
+export interface RawContentCollection {
+  title: string;
+  description: RichTextField;
+  contentItemsCollection: { items: ContentItem[] };
+  image?: ContentfulImage;
+  sys: { id: string };
+  __typename: string;
 }
 
 export const SECTION_LAYOUT = {

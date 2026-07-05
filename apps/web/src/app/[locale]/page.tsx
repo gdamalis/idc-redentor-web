@@ -3,6 +3,7 @@ import { getLatestBlogPostPages } from "@lib/contentful/getBlogPostPages";
 import { getContentCollection } from "@lib/contentful/getContentCollection";
 import { getCtaComponent } from "@lib/contentful/getCtaComponent";
 import { getHeroBannerComponent } from "@lib/contentful/getHeroBannerComponent";
+import { mapContentCollection } from "@lib/contentful/mapContentCollection";
 import { buildPageMetadata } from "@lib/metadata";
 import { BlogSection } from "@src/components/features/blog-section";
 import { ComponentCta } from "@src/components/features/component-cta";
@@ -51,7 +52,7 @@ export default async function Home({
   return (
     <main>
       <OurMissionCta content={ourMission} />
-      <OurMissionSection content={ourMissionCollection} />
+      <OurMissionSection content={mapContentCollection(ourMissionCollection)} />
       <BlogSection posts={latestPosts} />
       <ComponentCta content={contactCta} />
     </main>

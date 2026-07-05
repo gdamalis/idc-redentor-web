@@ -2,6 +2,7 @@ import { shouldUseDraftMode } from "@lib/contentful/draftMode";
 import { getContentCollection } from "@lib/contentful/getContentCollection";
 import { getCtaComponent } from "@lib/contentful/getCtaComponent";
 import { getTextBlockComponent } from "@lib/contentful/getTextBlockComponent";
+import { mapContentCollection } from "@lib/contentful/mapContentCollection";
 import { buildPageMetadata } from "@lib/metadata";
 import { ComponentCta } from "@src/components/features/component-cta";
 import { CreedSection } from "@src/components/features/creed-section";
@@ -70,8 +71,8 @@ export default async function CommunityPage({
         />
       )}
       <InfoCommunity content={infoCommunity} />
-      <CreedSection content={ourCreedContent} />
-      <OurMissionSection content={ourMissionCollection} />
+      <CreedSection content={mapContentCollection(ourCreedContent)} />
+      <OurMissionSection content={mapContentCollection(ourMissionCollection)} />
       <ComponentCta content={contactCta} />
     </main>
   );

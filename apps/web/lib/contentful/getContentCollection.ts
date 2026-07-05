@@ -1,5 +1,5 @@
 import { fetchGraphQL } from "./fetch";
-import { ContentCollection } from "./types";
+import { RawContentCollection } from "./types";
 
 const GRAPHQL_FIELDS = `
   title
@@ -26,6 +26,10 @@ const GRAPHQL_FIELDS = `
           title
         }
         kind
+        sys {
+          id
+        }
+        __typename
       }
     }
   }
@@ -35,11 +39,14 @@ const GRAPHQL_FIELDS = `
   __typename
 `;
 
+// Returns the RAW GraphQL node (unmapped) so useLivePreview can subscribe to it
+// directly. Callers on the non-draft render path apply mapContentCollection to
+// get back the presentational ContentCollection shape.
 export async function getContentCollection(
   name: string,
   locale: string,
   isDraftMode = false,
-): Promise<ContentCollection> {
+): Promise<RawContentCollection> {
   const data = await fetchGraphQL(
     `query {
         contentCollectionCollection(
@@ -57,14 +64,5 @@ export async function getContentCollection(
     isDraftMode,
   );
 
-  const contentCollectionCollection = {
-    title: data?.data?.contentCollectionCollection?.items[0].title,
-    description: data?.data?.contentCollectionCollection?.items[0].description,
-    creedItems:
-      data?.data?.contentCollectionCollection?.items[0].contentItemsCollection
-        .items,
-    image: data?.data?.contentCollectionCollection?.items[0].image,
-  };
-
-  return contentCollectionCollection;
+  return data?.data?.contentCollectionCollection?.items?.[0];
 }
