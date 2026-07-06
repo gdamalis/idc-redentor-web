@@ -86,11 +86,14 @@ async function getCollection(): Promise<Collection<PdfJob> | undefined> {
 /**
  * Idempotent dirty-mark: bumps `dirtyAt`/`contentHash` (upserting a fresh job on first webhook)
  * without ever touching `lastRenderedHash` — that field is only ever set by `completeJob`.
+ * Returns `true` once the upsert succeeds; returns `false` when Mongo is unavailable
+ * (`getCollection()` yields `undefined`) or the upsert throws — the caller (the regen webhook
+ * route) uses `false` to 5xx so Contentful retries the delivery instead of silently dropping it.
  */
-export async function markDirty(entryId: string, contentHash: string): Promise<void> {
+export async function markDirty(entryId: string, contentHash: string): Promise<boolean> {
   try {
     const col = await getCollection();
-    if (!col) return;
+    if (!col) return false;
     const now = new Date();
     await col.updateOne(
       { entryId },
@@ -100,8 +103,10 @@ export async function markDirty(entryId: string, contentHash: string): Promise<v
       },
       { upsert: true },
     );
+    return true;
   } catch (error) {
     logError("markDirty", entryId, error);
+    return false;
   }
 }
 

@@ -310,7 +310,7 @@ describe("deleteSupersededAsset", () => {
     expect(assetDelete).not.toHaveBeenCalled();
   });
 
-  it("unpublishes (if published) then deletes when only exceptEntryId references it", async () => {
+  it("skips deletion (and unpublish) when the old asset is PUBLISHED, even with no other referrers", async () => {
     stubValidEnv();
     entryGetMany.mockResolvedValue({ items: [{ sys: { id: "keepEntry" } }] });
     assetGet.mockResolvedValue({ sys: { id: "oldAsset", version: 3, publishedVersion: 2 } });
@@ -320,9 +320,9 @@ describe("deleteSupersededAsset", () => {
       exceptEntryId: "keepEntry",
     });
 
-    expect(result).toEqual({ ok: true, deleted: true });
-    expect(assetUnpublish).toHaveBeenCalledTimes(1);
-    expect(assetDelete).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({ ok: true, deleted: false, skippedReason: "published-asset" });
+    expect(assetUnpublish).not.toHaveBeenCalled();
+    expect(assetDelete).not.toHaveBeenCalled();
   });
 
   it("deletes without unpublishing when the asset was never published and no referrers remain", async () => {

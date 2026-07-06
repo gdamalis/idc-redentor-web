@@ -150,9 +150,10 @@ describe("Mongo-backed pdf_jobs functions", () => {
     find.mockReturnValue({ toArray: vi.fn().mockResolvedValue([]) });
   });
 
-  it("markDirty upserts dirtyAt/contentHash without touching lastRenderedHash", async () => {
+  it("markDirty upserts dirtyAt/contentHash without touching lastRenderedHash, and returns true", async () => {
     const { markDirty } = await import("./pdfJobs");
-    await markDirty("entry-1", "hash-x");
+    const result = await markDirty("entry-1", "hash-x");
+    expect(result).toBe(true);
     expect(updateOne).toHaveBeenCalledOnce();
     const [filter, update, options] = updateOne.mock.calls[0] as [
       Record<string, unknown>,
@@ -163,6 +164,20 @@ describe("Mongo-backed pdf_jobs functions", () => {
     expect(update.$set.contentHash).toBe("hash-x");
     expect(update.$set).not.toHaveProperty("lastRenderedHash");
     expect(options).toEqual({ upsert: true });
+  });
+
+  it("markDirty returns false when connect() yields no client (Mongo unavailable)", async () => {
+    const { connect } = await import("../database.service");
+    vi.mocked(connect).mockResolvedValueOnce(undefined);
+    const { markDirty } = await import("./pdfJobs");
+    expect(await markDirty("entry-1", "hash-x")).toBe(false);
+    expect(updateOne).not.toHaveBeenCalled();
+  });
+
+  it("markDirty returns false when the upsert rejects", async () => {
+    updateOne.mockRejectedValueOnce(new Error("upsert boom"));
+    const { markDirty } = await import("./pdfJobs");
+    expect(await markDirty("entry-1", "hash-x")).toBe(false);
   });
 
   it("claimJob returns false when connect() fails (ICR-111 guard)", async () => {

@@ -208,8 +208,11 @@ export async function swapPdfSummary(
 
 /**
  * Guard-referenced delete: refuses to delete an asset that any entry OTHER than
- * `exceptEntryId` still links to. Otherwise unpublishes (if published) then
- * deletes. Mirrors `delete-contentful.mjs --guard-referenced`.
+ * `exceptEntryId` still links to. For a PUBLISHED asset, skips the delete entirely
+ * (draft-only cleanup) — the swap above only ever touches the DRAFT entry, so an
+ * already-published sermon's LIVE version may still be serving this asset. Only
+ * draft-only (never-published) assets are actually deleted. Mirrors
+ * `delete-contentful.mjs --guard-referenced`.
  */
 export async function deleteSupersededAsset(
   params: DeleteSupersededAssetParams,
@@ -229,10 +232,14 @@ export async function deleteSupersededAsset(
 
     const asset = await client.asset.get({ assetId: params.assetId });
     if (asset.sys.publishedVersion != null) {
-      await client.asset.unpublish({ assetId: params.assetId });
+      // The old asset is PUBLISHED, so the LIVE (published) version of the sermon may
+      // still serve it — the draft-only swap above never touched the published entry.
+      // Deleting/unpublishing it here would break the PDF on the live page until a human
+      // re-publishes. Leave it; a later regen (once it's no longer published) or a human
+      // (delete-contentful.mjs) cleans it up. (Codex PR #81 P1.)
+      return { ok: true, deleted: false, skippedReason: "published-asset" };
     }
     await client.asset.delete({ assetId: params.assetId });
-
     return { ok: true, deleted: true };
   } catch (error) {
     return { ok: false, reason: describeError(error, token) };

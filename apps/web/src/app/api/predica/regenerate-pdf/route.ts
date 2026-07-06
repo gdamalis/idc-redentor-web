@@ -41,7 +41,12 @@ export async function POST(request: Request) {
     }
 
     const contentHash = computeSermonContentHash(sermonEsAR, sermonEnUS);
-    await markDirty(sys.id, contentHash);
+    const queued = await markDirty(sys.id, contentHash);
+    if (!queued) {
+      // Enqueue write failed (Mongo down / upsert error) — 5xx so Contentful retries
+      // rather than silently dropping the edit.
+      return NextResponse.json({ message: "Failed to enqueue regen job" }, { status: 500 });
+    }
 
     return NextResponse.json({ queued: true }, { status: 202 });
   } catch (error) {

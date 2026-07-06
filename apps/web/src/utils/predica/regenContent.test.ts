@@ -150,6 +150,12 @@ describe("computeSermonContentHash", () => {
     expect(changed).not.toBe(base);
   });
 
+  it("changes when sermonDate changes (rendered on the PDF cover)", () => {
+    const base = computeSermonContentHash(makeSermon({ sermonDate: "2026-06-07" }), undefined);
+    const changed = computeSermonContentHash(makeSermon({ sermonDate: "2026-06-14" }), undefined);
+    expect(changed).not.toBe(base);
+  });
+
   it("changes when a scripture verse changes", () => {
     const base = computeSermonContentHash(makeSermon(), undefined);
     const changed = computeSermonContentHash(

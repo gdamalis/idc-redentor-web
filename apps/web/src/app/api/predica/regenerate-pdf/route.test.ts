@@ -52,7 +52,7 @@ beforeEach(() => {
   process.env.PREDICA_REGEN_SECRET = SECRET;
   getSermonById.mockReset();
   markDirty.mockReset();
-  markDirty.mockResolvedValue(undefined);
+  markDirty.mockResolvedValue(true);
 });
 
 describe("POST /api/predica/regenerate-pdf", () => {
@@ -125,5 +125,15 @@ describe("POST /api/predica/regenerate-pdf", () => {
     const body = await res.json();
     expect(body.message).not.toContain("secret-token-xyz");
     expect(markDirty).not.toHaveBeenCalled();
+  });
+
+  it("500s when markDirty fails to enqueue (Mongo down / upsert error), instead of 202ing", async () => {
+    getSermonById.mockImplementation(async (_id: string, locale: string) =>
+      locale === "es-AR" ? fixtureSermon() : undefined,
+    );
+    markDirty.mockResolvedValue(false);
+    const res = await POST(req(sermonPayload("e1")));
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ message: "Failed to enqueue regen job" });
   });
 });

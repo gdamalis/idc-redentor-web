@@ -8,11 +8,12 @@
  *    same PDF body the website shows (see docs/architecture/predica-pdf-mirrors-post.md).
  *
  *  - `computeSermonContentHash` — ONE canonical hash of only the fields that
- *    affect the rendered PDF (title, body content, scripture, byline), shared by
- *    the webhook (marks a job dirty) and the cron render (decides whether a
- *    render is a no-op). Hashing the DERIVED content blocks (not the raw rich
- *    text) means mark-only/formatting-only Rich Text edits and any non-PDF field
- *    (SEO, keywords, featured image, audio, …) never churn the hash.
+ *    affect the rendered PDF (title, sermon date, body content, scripture,
+ *    byline), shared by the webhook (marks a job dirty) and the cron render
+ *    (decides whether a render is a no-op). Hashing the DERIVED content blocks
+ *    (not the raw rich text) means mark-only/formatting-only Rich Text edits and
+ *    any non-PDF field (SEO, keywords, featured image, audio, …) never churn the
+ *    hash.
  */
 import { BLOCKS } from "@contentful/rich-text-types";
 import type { Block, Document, Inline, Text, TopLevelBlock } from "@contentful/rich-text-types";
@@ -160,6 +161,9 @@ function canonicalStringify(value: unknown): string {
  *
  * Deliberately excludes seoTitle/seoDescription/keywords/featuredImage/audio/
  * durationSeconds/slug/sys/pdfSummary — editing any of those must NOT change the hash.
+ * `sermonDate` IS included below — it isn't localized (one value), but it's rendered
+ * on the PDF cover (`buildPdfHtml` → `formatSermonDate`), so a date-only edit must
+ * re-render.
  */
 export function computeSermonContentHash(
   sermonEsAR: Sermon | undefined,
@@ -170,6 +174,8 @@ export function computeSermonContentHash(
       "es-AR": sermonEsAR?.title ?? "",
       "en-US": sermonEnUS?.title ?? "",
     },
+    // Non-localized, but rendered on the PDF cover — a date-only edit must re-render.
+    sermonDate: sermonEsAR?.sermonDate ?? sermonEnUS?.sermonDate ?? "",
     content: {
       "es-AR": richTextToContentBlocks(sermonEsAR?.content?.json as Document | undefined),
       "en-US": richTextToContentBlocks(sermonEnUS?.content?.json as Document | undefined),
