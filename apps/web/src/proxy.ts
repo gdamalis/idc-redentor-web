@@ -44,7 +44,9 @@ export function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next|_vercel|api|trpc).*)",
+    // `monitoring` is the Sentry tunnelRoute (next.config.ts) — it must never be
+    // locale-rewritten, or all browser-side error reporting silently 404s.
+    "/((?!_next|_vercel|api|trpc|monitoring).*)",
   ],
 };
 
