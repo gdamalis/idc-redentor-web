@@ -152,7 +152,7 @@ Sessions are named after the active Jira ticket automatically.
 ## Testing
 
 - **Vitest** (`vitest.config.ts`, jsdom): unit smoke tests for pure utilities (`src/utils/*`, `src/i18n/config#buildLocaleAlternates`, getter shape-mappers). Run `pnpm test` (single pass) or `pnpm test:watch`. No coverage thresholds — coverage is report-only.
-- **Playwright** (`playwright.config.ts`): configured with four projects (`e2ePublic`, `e2eBlog`, `apiForms`, `apiLikes`) but **no specs in Phase 1** — the `qa-runner` agent authors specs per-ticket. QA runs against **Vercel preview deployments** (`*.vercel.app`), never production and never a separate staging env (there is none).
+- **Playwright** (`playwright.config.ts`): configured with four projects (`e2ePublic`, `e2eBlog`, `apiForms`, `apiLikes`) but **no specs in Phase 1** — the `qa-runner` agent authors specs per-ticket. Pre-merge QA runs against the PR's **Vercel preview deployment** (`*.vercel.app`); post-merge QA runs against **staging** (`staging.idcredentor.org`). **Never** against production.
 - **No Storybook.**
 - After any change, evaluate whether a meaningful test is warranted; do not add tests for trivial boilerplate.
 
