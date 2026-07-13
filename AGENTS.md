@@ -64,7 +64,7 @@ See `docs/architecture/architecture.md` and the domain docs in `docs/` for detai
 
 - **Vitest** (`vitest.config.ts`, jsdom): unit smoke tests on pure utilities and getter shape-mappers. `pnpm test` for a single run.
 - **Playwright** (`playwright.config.ts`): four projects configured, **no specs in Phase 1**; `qa-runner` authors them per-ticket.
-- QA targets **Vercel preview deployments** (`*.vercel.app`) — never production, no separate staging.
+- QA targets: pre-merge, the PR's **Vercel preview deployment** (`*.vercel.app`); post-merge, **staging** (`staging.idcredentor.org`). **Never** production.
 - No Storybook.
 
 ## Environment

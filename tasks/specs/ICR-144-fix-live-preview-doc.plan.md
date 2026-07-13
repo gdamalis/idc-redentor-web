@@ -289,8 +289,12 @@ git add docs/architecture/contentful-data-layer.md
 git commit -m "docs(ICR-144): correct the Live Preview content preview URL guidance"
 ```
 
-(`docs:` — not `chore:` — is deliberate: it is accurate, and it keeps semantic-release from cutting a
-version bump for a change with no runtime surface.)
+(`docs:` — not `chore:` — is deliberate because it describes the change **honestly**. Be aware of the
+release impact: this repo's `.releaserc.json` maps `docs` → **patch**, so a `docs:` PR title **does**
+cut a version bump on merge (`chore` is the `release: false` type). That is the repo's intended,
+documented behavior — see `docs/architecture/contributing.md` § Releases and `AGENTS.md:134` — and
+precedent: PR #82 (`docs: fix newsletter env drift`) cut `1.25.3`. Pick the type that is _true_, and
+accept its release impact; do not pick a type to dodge a bump.)
 
 ---
 
