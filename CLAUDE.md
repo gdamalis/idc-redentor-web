@@ -260,6 +260,7 @@ A human always merges the PR and closes the issue (transitions it to **Done**). 
   - `forms-and-email.md` — contact + subscribe flows, the SendGrid/Resend adapter, templates, spam/PII handling.
   - `likes-and-mongodb.md` — the cached Mongo client, the `likes`/`contact` collections, visitor de-dup, write safety.
   - `seo-and-metadata.md` — `lib/metadata.ts`, the Contentful `Seo` type, OG/Twitter cards, JSON-LD, locale alternates.
+  - `observability-sentry.md` — `@sentry/nextjs` across server/edge/client, the `options.ts` single source of truth, the `/monitoring` tunnel vs. CSP/proxy-matcher traps, and the locked PII posture.
   - `agent-harness.md` — how to use the agents and commands; the human-gated Jira automation.
   - `predica-bibleverse-reuse.md` — how `/predica` dedups scripture: the derived, version-scoped `bibleVerse` `internalName` (`"Joel 2:13 (NVI)"`) + the `--upsert-by-internal-name` CMA flag; cross-sermon reuse + sermon re-run safety.
   - `predica-rerun-idempotency.md` — re-running `/predica` safely: pre-flight transcript reuse by audio hash, **Gate 0** existing-sermon detection, regenerate by **update-in-place** (`--id`) instead of duplicating, and the guarded `delete-contentful.mjs` cleanup of superseded assets + orphaned legacy verses.

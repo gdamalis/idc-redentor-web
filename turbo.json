@@ -16,7 +16,13 @@
         "CONTENTFUL_MANAGEMENT_ACCESS_TOKEN",
         "PREDICA_REGEN_SECRET",
         "CRON_SECRET",
-        "PDF_REGEN_QUIET_WINDOW_SECONDS"
+        "PDF_REGEN_QUIET_WINDOW_SECONDS",
+        "NEXT_PUBLIC_SENTRY_DSN",
+        "NEXT_PUBLIC_SENTRY_ENVIRONMENT",
+        "SENTRY_ORG",
+        "SENTRY_PROJECT",
+        "SENTRY_AUTH_TOKEN",
+        "CI"
       ]
     },
     "start": { "cache": false, "persistent": true },

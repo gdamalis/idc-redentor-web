@@ -44,5 +44,12 @@ declare namespace NodeJS {
     
     // MongoDB
     MONGODB_URI: string;
+
+    // Sentry (observability) — see docs/architecture/observability-sentry.md
+    NEXT_PUBLIC_SENTRY_DSN?: string;
+    NEXT_PUBLIC_SENTRY_ENVIRONMENT?: string;
+    SENTRY_ORG?: string;
+    SENTRY_PROJECT?: string;
+    SENTRY_AUTH_TOKEN?: string;
   }
-} 
+}
