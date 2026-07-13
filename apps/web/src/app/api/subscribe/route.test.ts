@@ -10,6 +10,12 @@ const req = (body: unknown) =>
     body: JSON.stringify(body),
   });
 
+const rawReq = (body?: BodyInit) =>
+  new Request("http://x/api/subscribe", {
+    method: "POST",
+    body,
+  });
+
 beforeEach(() => addSubscriber.mockReset());
 
 describe("POST /api/subscribe", () => {
@@ -34,6 +40,50 @@ describe("POST /api/subscribe", () => {
   it("400 on invalid email (zod) without calling the service", async () => {
     const res = await POST(req({ email: "nope" }));
     expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({
+      messageKey: "SubscribeBanner.error-unexpected",
+    });
     expect(addSubscriber).not.toHaveBeenCalled();
+  });
+  it("400 on an empty body without calling the service", async () => {
+    const res = await POST(rawReq());
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({
+      messageKey: "SubscribeBanner.error-unexpected",
+    });
+    expect(addSubscriber).not.toHaveBeenCalled();
+  });
+  it("400 on malformed JSON without calling the service", async () => {
+    const res = await POST(rawReq("{not json"));
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({
+      messageKey: "SubscribeBanner.error-unexpected",
+    });
+    expect(addSubscriber).not.toHaveBeenCalled();
+  });
+  it("400 when the service reports invalid-input", async () => {
+    addSubscriber.mockResolvedValue({ ok: false, reason: "invalid-input" });
+    const res = await POST(req({ email: "a@b.com" }));
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({
+      messageKey: "SubscribeBanner.error-unexpected",
+    });
+    expect(addSubscriber).toHaveBeenCalled();
+  });
+  it("500 when the service reports failed", async () => {
+    addSubscriber.mockResolvedValue({ ok: false, reason: "failed" });
+    const res = await POST(req({ email: "a@b.com" }));
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({
+      messageKey: "SubscribeBanner.error-unexpected",
+    });
+  });
+  it("500 when the service is not configured", async () => {
+    addSubscriber.mockResolvedValue({ ok: false, reason: "not-configured" });
+    const res = await POST(req({ email: "a@b.com" }));
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({
+      messageKey: "SubscribeBanner.error-unexpected",
+    });
   });
 });
