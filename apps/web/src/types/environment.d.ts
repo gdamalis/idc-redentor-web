@@ -20,11 +20,6 @@ declare namespace NodeJS {
     CRON_SECRET: string;
     PDF_REGEN_QUIET_WINDOW_SECONDS?: string;
 
-    // MailChimp
-    MAILCHIMP_API_KEY: string;
-    MAILCHIMP_API_SERVER: string;
-    MAILCHIMP_AUDIENCE_ID: string;
-
     // Resend Broadcasts
     RESEND_AUDIENCE_ID: string;
     RESEND_AUDIENCE_ID_ES_AR: string;

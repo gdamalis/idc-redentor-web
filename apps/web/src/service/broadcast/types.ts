@@ -10,7 +10,7 @@ export const broadcastInputSchema = z.object({
   subject: z.string().trim().min(1),
   /** Inner body HTML; the service wraps it in the broadcast template. */
   html: z.string().min(1),
-  /** Plain-text alternative (Mailchimp `plain_text`). */
+  /** Plain-text alternative. */
   text: z.string().min(1),
   locale: z.enum(BROADCAST_LOCALES),
 });
