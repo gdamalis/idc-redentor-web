@@ -15,6 +15,7 @@ This folder is the **canonical product definition** for the Iglesia de Cristo Re
 3. **[content-types.md](./content-types.md)** — the real Contentful content types (Page, the four section components, ContentCollection with Credo + ValueItem, EventBanner → Event + LocationComponent, Blog post, Footer, NavigationMenu, Seo), with the getter that reads each and the route/component that renders it.
 4. **[editorial-and-content-rules.md](./editorial-and-content-rules.md)** — the bilingual rule, voice/tone for a church audience, the doctrinal-content guardrail, image and SEO-copy rules, and the publish/preview flow.
 5. **[ai-era-strategy.md](./ai-era-strategy.md)** — the discoverability thesis for a church (structured data + clean metadata, **not** an on-site bot), prioritized, and the KPIs.
+6. **[privacy-policy.md](./privacy-policy.md)** — the canonical bilingual copy of the privacy policy published at `/es-AR/privacidad` and `/en-US/privacy`, the factual basis for every claim it makes, and the human-only runbook for publishing it to Contentful. _Change the policy here first._
 
 ## How the `product-manager` agent uses this
 
@@ -28,4 +29,4 @@ The `product-manager` agent loads this folder on every run and applies **[scope-
 
 These files are meant to be referenced and updated, not frozen. When a product decision changes, update the relevant file and bump its **Last reviewed** date. If a new idea reveals a doc is stale or self-contradictory, fix the doc — stale product docs are worse than none. Doctrinal and mission text changes are **leadership-owned**: agents and editors surface proposed wording for human confirmation rather than silently rewriting it. The `product-manager` agent will flag drift it notices rather than diverging from these docs.
 
-**Last reviewed:** 2026-07-05
+**Last reviewed:** 2026-07-14
