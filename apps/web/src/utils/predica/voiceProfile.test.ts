@@ -49,6 +49,30 @@ describe("resolveInterpreted", () => {
   it("treats a legacy sermon.json with no interpreted field as NOT interpreted (back-compat)", () => {
     expect(resolveInterpreted({ sermon: {} })).toBe(false);
   });
+
+  // Regression: a strict `=== true` check let a MALFORMED interpreted field read as "not
+  // interpreted", which would hand an interpreted transcript to the voice coach — the exact
+  // hole this module exists to close, re-opened by a typo. sermon.json is written by an LLM and
+  // may be hand-edited, so a string "true" or a 1 is an ordinary slip, not a contrived input.
+  // Fail closed: anything that is not cleanly absent/null/false counts as interpreted.
+  describe("fails CLOSED on a malformed `interpreted` field", () => {
+    it.each([
+      ["the STRING \"true\"", "true"],
+      ["the STRING \"false\" (still malformed — a boolean was required)", "false"],
+      ["the number 1", 1],
+      ["the number 0", 0],
+      ["an object", {}],
+      ["an empty string", ""],
+    ])("treats %s as INTERPRETED", (_label, value) => {
+      expect(resolveInterpreted({ sermon: { interpreted: value } })).toBe(true);
+    });
+
+    it("still treats a CLEAN false/null/absent as not interpreted (no false positives)", () => {
+      expect(resolveInterpreted({ sermon: { interpreted: false } })).toBe(false);
+      expect(resolveInterpreted({ sermon: { interpreted: null } })).toBe(false);
+      expect(resolveInterpreted({ sermon: { interpreted: undefined } })).toBe(false);
+    });
+  });
 });
 
 describe("canLearnVoiceFrom", () => {

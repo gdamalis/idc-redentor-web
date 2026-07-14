@@ -48,8 +48,20 @@ export function slugifyPersonName(name) {
     .replace(/^-+|-+$/g, "");
 }
 
+/**
+ * FAIL-CLOSED on a malformed `interpreted` field. sermon.json is written by an LLM and may be
+ * hand-edited, so the field can arrive as the STRING "true", as 1, or as anything else. A strict
+ * `=== true` check would read those as NOT interpreted and let the coach learn from an
+ * interpreted transcript — the very hole this guard exists to close, re-opened by a typo.
+ * Anything not cleanly absent/null/false is therefore treated as INTERPRETED.
+ */
 export function resolveInterpreted(input) {
-  return input.flag === true || input.sermon?.interpreted === true;
+  if (input.flag === true) return true;
+
+  const persisted = input.sermon?.interpreted;
+  if (persisted === undefined || persisted === null || persisted === false) return false;
+
+  return true;
 }
 
 export function canLearnVoiceFrom(run) {

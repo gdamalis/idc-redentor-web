@@ -131,6 +131,19 @@ describe("check-voice-learn.mjs CLI contract", () => {
     expect(status).toBe(0);
   });
 
+  it("REFUSES a sermon.json whose `interpreted` is malformed (the string \"true\") — fail closed", () => {
+    // sermon.json is written by an LLM and may be hand-edited. A strict `=== true` check read
+    // "true" as NOT interpreted and allowed the profile write — the guard's own hole. The twin
+    // must fail closed exactly like the canon does.
+    const sermon = path.join(
+      REPO_ROOT,
+      "apps/web/src/utils/predica/__fixtures__/malformed-interpreted-sermon.json",
+    );
+    const { decision, status } = runTwin(["--preacher", "Doug Wagner", "--sermon", sermon]);
+    expect(decision).toEqual({ ok: false, reason: "interpreted" });
+    expect(status).toBe(3);
+  });
+
   it("exits 2 on an unreadable --sermon path (a usage error, distinct from a refusal)", () => {
     const res = spawnSync(
       "node",

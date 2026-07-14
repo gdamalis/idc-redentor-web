@@ -53,12 +53,30 @@ export function slugifyPersonName(name: string): string {
  * The OR is the whole point. On a regenerate the human may forget `--interpreted`; the
  * sermon.json written by the first run still says so, and a forgotten flag must never be
  * able to re-open the hole.
+ *
+ * FAIL-CLOSED ON A MALFORMED FIELD. `sermon.json` is produced by an LLM (predica-writer) and
+ * may be hand-edited, so `interpreted` can arrive as the STRING "true", as `1`, or as any
+ * other non-boolean. A strict `=== true` check would read those as NOT interpreted and let the
+ * coach learn from an interpreted transcript — the precise hole this module exists to close,
+ * re-opened by a typo. So anything that is not cleanly absent/null/false is treated as
+ * INTERPRETED (i.e. refuse).
+ *
+ * The asymmetry justifies it: refusing costs one voice-profile append that the next run redoes;
+ * wrongly allowing one writes the interpreter's voice into the preacher's append-only profile,
+ * forever. Note `validateSermonForEntry()` rejects a non-boolean `interpreted` too — but that
+ * runs at step 3, AFTER the writer has already put the file on disk, so step 2.5 cannot rely
+ * on it having run.
  */
 export function resolveInterpreted(input: {
   flag?: boolean;
-  sermon?: { interpreted?: boolean } | null;
+  sermon?: { interpreted?: unknown } | null;
 }): boolean {
-  return input.flag === true || input.sermon?.interpreted === true;
+  if (input.flag === true) return true;
+
+  const persisted = input.sermon?.interpreted;
+  if (persisted === undefined || persisted === null || persisted === false) return false;
+
+  return true;
 }
 
 /**

@@ -1,0 +1,7 @@
+{
+  "slug": "example-malformed-interpreted-sermon",
+  "sermonDate": "2026-07-12",
+  "preacher": "Doug Wagner",
+  "interpreted": "true",
+  "interpreter": { "name": "Jonathan Hanegan" }
+}
