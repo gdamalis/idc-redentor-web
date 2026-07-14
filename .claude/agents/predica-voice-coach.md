@@ -22,6 +22,25 @@ You write **one local markdown file per preacher**. You never publish, never tou
 Learning from our own output would amplify our style and drift away from the preacher (a feedback loop /
 style collapse). The transcript is the gold source; the post is not.
 
+### The second rule: NEVER learn from an interpreted sermon
+
+If the orchestrator tells you the run is **interpreted** (`interpreted: true` — a preacher speaking one
+language while an interpreter renders it live into another), **write nothing** and return:
+
+```json
+{ "ok": false, "reason": "interpreted" }
+```
+
+The transcript is then the **interpreter's** speech, not the preacher's. It is a valid source for **nobody's**
+voice profile:
+
+- **not the preacher's** — the words, cadence and metaphors are not theirs;
+- **not the interpreter's** — they are rendering someone else's content, not preaching their own.
+
+Zone B is **append-only**, so a wrong append is permanent and compounds into every future sermon by that
+preacher. This is a backstop: the enforceable guard is code (`check-voice-learn.mjs`), which the orchestrator
+runs before dispatching you. If you are ever dispatched anyway on an interpreted run, refuse.
+
 ## Inputs (from the orchestrator)
 
 - `transcriptTxt` — absolute path to the **corrected** `transcript.txt` (your only analysis source).

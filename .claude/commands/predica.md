@@ -24,6 +24,9 @@ or auto-skip them. See `tasks/specs/sermon-pipeline.md` §7–§9.
   Per-sermon working files live under `tasks/predicas/<sermonDate>_<slug>/` (gitignored); temp files use `600` perms.
 - **`--dry-run`** stops after the PDFs (step 4) — **no Contentful writes, no WhatsApp finalize**. It prints
   every action it would take.
+- **`--interpreted`** / **`--interpreter "<Full Name>"`** mark a **live-interpreted** sermon. The transcript
+  is then the interpreter's speech, so **step 2.5 (voice coach) is refused** — an interpreted transcript is a
+  valid source for **no** voice profile, not the preacher's and not the interpreter's (ICR-147).
 
 ## 0. Pre-flight
 
@@ -34,6 +37,15 @@ or auto-skip them. See `tasks/specs/sermon-pipeline.md` §7–§9.
    - `$1` (optional) = audio path. If omitted, pick the **newest** file in `config.predica.audioInbox`
      (`ls -t` filtered to audio extensions). Quote the path (church folders have spaces + accents).
    - `--dry-run` → boolean.
+   - `--interpreted` → boolean. **Human-declared**: the preacher spoke one language while an interpreter
+     rendered it live into another, so `transcript.txt` is the **interpreter's** speech, not the preacher's.
+     **Never infer this from the audio** — a whisper language-ID sweep of a known interpreted sermon reported
+     Spanish at p≈0.999 in 43/43 windows and missed the preacher's English entirely. Do not build a detector.
+   - `--interpreter "<Full Name>"` → string. **Implies `--interpreted`** (the implication only ever runs
+     toward _more_ guarding, never less). If `--interpreted` is given without a name, the guard still fires —
+     ask the human for the interpreter's name once, because `sermon.json` and the WhatsApp credit need it.
+     The interpreter is **not** a preacher: never add them to `additionalPreachers`, never link them as an
+     `author`.
    - Resolve `sermonDate`: parse a leading `YYYYMMDD` in the filename → `YYYY-MM-DD`; else use the file's
      mtime date and note the assumption.
    - Resolve `preacher`: parse the filename (e.g. `… - Prédica - Jonathan.m4a` → `Jonathan …`); if only a
@@ -86,9 +98,33 @@ source of truth for everything downstream.)
 
 ## 2.5 Learn the preacher's voice — (subagent: `config.predica.agents.voiceCoach`)
 
-Dispatch `predica-voice-coach` with the corrected `transcriptTxt`, `voiceProfilePath`, `preacher`,
-`preacherSlug`, `sermonDate`, and the provisional slug. As an expert speech/rhetoric coach it studies how
-**this** preacher actually communicates — **from the corrected transcript only**, never the generated
+**FIRST — run the guard (Bash). It decides whether the coach runs at all:**
+
+```bash
+node .claude/scripts/predica/check-voice-learn.mjs \
+  --preacher "<preacher>" \
+  $( [ "$interpreted" = true ] && echo --interpreted ) \
+  --sermon "<slugDir>/sermon.json"     # only if it already exists (a regenerate)
+```
+
+- **exit 0** → proceed and dispatch the coach exactly as described below (the normal path, unchanged).
+- **exit 3** → **SKIP the coach.** Print plainly why, e.g.:
+  > Step 2.5 **SKIPPED** — interpreted sermon (`<interpreter>` interpreted for `<preacher>`). An interpreted
+  > transcript is a valid source for **no** voice profile — not the preacher's, not the interpreter's.
+  > `tasks/predicas/_voices/` is untouched.
+- **any other outcome** (script missing, crash, unparseable output) → **SKIP the coach — FAIL CLOSED.**
+  Skipping costs a profile append the next run redoes; a wrong append is **append-only and permanent**. Print
+  the error and continue to step 3.
+
+The guard reads `interpreted` from **both** the flag **and** the persisted `sermon.json`, so a **regenerate
+that forgets `--interpreted` still refuses** — a forgotten flag cannot silently re-open the hole. The guard is
+CODE (`apps/web/src/utils/predica/voiceProfile.ts` + its `.mjs` twin), unit-tested and parity-bound, because
+`predica-voice-coach` is a pure-prose agent that cannot enforce this itself.
+
+**If the guard allowed it:** dispatch `predica-voice-coach` with the corrected `transcriptTxt`,
+`voiceProfilePath`, `preacher`, `preacherSlug`, `sermonDate`, and the provisional slug. As an expert
+speech/rhetoric coach it studies how **this** preacher actually communicates — **from the corrected
+transcript only**, never the generated
 `sermon.json` (that would create a model-style feedback loop) — and maintains the local, human-curatable
 per-preacher voice profile at `voiceProfilePath`: **Zone A** (human-curated canonical guide, seeded once
 then never auto-overwritten) + **Zone B** (append-only dated log). The writer reads it at step 3 so the post
@@ -107,10 +143,16 @@ articulates the preacher's accumulated voice. It returns `{ ok, voiceProfilePath
 ## 3. Write the bilingual sermon — (subagent: `config.predica.agents.writer`)
 
 Dispatch `predica-writer` with `slugDir`, the corrected `transcript.txt`, `sermonDate`, `preacher`,
-`durationSeconds`, `config.predica.scriptureVersion`, the serviceLabel defaults, and `voiceProfilePath`
-(the per-preacher voice profile from step 2.5 — **pass it only if the file exists**; absent → the writer
-infers voice from the transcript alone, as before). It writes `sermon.json` and returns the
-**canonical** `slug`.
+`interpreted`, `interpreter`, `durationSeconds`, `config.predica.scriptureVersion`, the serviceLabel
+defaults, and `voiceProfilePath` (the per-preacher voice profile from step 2.5 — **pass it only if the file
+exists**; absent → the writer infers voice from the transcript alone, as before). It writes `sermon.json`
+and returns the **canonical** `slug`.
+
+- **Interpreted sermons.** Pass `interpreted` + `interpreter.name`. The writer must record both in
+  `sermon.json`, must **not** treat the transcript's surface phrasing as the **preacher's** voice (it is the
+  interpreter's), and applies the scripture-quotation-only correction license (see `predica-writer.md`). A
+  pre-existing `voiceProfilePath` may still be **read** if it exists — a profile learned from the preacher's
+  **own** (non-interpreted) sermons is their authentic voice. The guard blocks **writes**, not reads.
 
 Then **validate + reconcile** (Bash):
 

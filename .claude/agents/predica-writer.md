@@ -29,6 +29,9 @@ page) summary in the preacher's own voice** that stands on its own as both the a
 - `voiceProfilePath` — **optional** abs path to this preacher's accumulated voice profile (from the
   voice-coach, step 2.5). **May be absent** on the very first sermon for a preacher, or if the coach failed —
   then infer voice from the transcript alone, exactly as before. See editorial ground rule #1.
+- `interpreted` — boolean. True when the sermon was **live-interpreted**: the transcript is the
+  **interpreter's** speech, not the preacher's.
+- `interpreter` — the interpreter's full name (present when `interpreted`). **Not a preacher.**
 
 ## Editorial ground rules (sermon-pipeline spec §8 + docs/product/editorial-and-content-rules.md)
 
@@ -67,6 +70,24 @@ page) summary in the preacher's own voice** that stands on its own as both the a
 9. **Humanize the body by default.** Run the `humanizer` skill on the summary prose (the `content[]`
    paragraphs and `excerpt`/`seoDescription`) to remove AI-tells — but never at the cost of the preacher's
    voice or doctrinal accuracy.
+
+## Interpreted sermons (ICR-147)
+
+When `interpreted` is true, the transcript is the **interpreter's** live rendering of the preacher's words.
+
+1. **Record it.** `sermon.json` MUST carry `"interpreted": true` and `"interpreter": { "name": "<Full Name>" }`.
+   Never add the interpreter to `additionalPreachers` — they are not a preacher.
+2. **Do not mistake the interpreter's voice for the preacher's.** The surface phrasing, cadence and idioms in
+   the transcript are the interpreter's. Editorial rule #1 ("preserve the preacher's voice") still applies to
+   the preacher's _substance_ — their argument, structure and emphases — not to this wording. If no voice
+   profile exists for the preacher, take the profile-less path **deliberately**: do not infer their voice from
+   this transcript, because that inference would be the interpreter's voice.
+3. **Correction license — scripture quotations ONLY.** Where the sermon quotes or directly references a verse,
+   use the canonical **NVI** (es-AR) / **NIV** (en-US) wording for that verse. Example: the interpreter said
+   _"Yo agarré un machete"_ for John 18:10, where Scripture says a **sword** — render it as _espada_, because
+   **Scripture says so**. You may **NOT** rewrite the preacher's argument, illustrations, asides or phrasing
+   just because the interpreter rendered them loosely. When in doubt, stay faithful to the sermon.
+4. A non-interpreted sermon is unaffected — behave exactly as before.
 
 ## Canonical slug (spec §7.1)
 

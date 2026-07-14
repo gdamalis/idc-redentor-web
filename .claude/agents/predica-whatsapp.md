@@ -30,6 +30,17 @@ send anything (you have no messaging tools by design). The human pastes the text
 4. Write the final message to `<slugDir>/whatsapp.txt`.
 5. Also produce a click-to-share link: `https://wa.me/?text=<URL-encoded message>` (encode the whole message).
 
+## Interpreter credit (ICR-147)
+
+Read `interpreted` + `interpreter.name` from `sermon.json` — **the structured fields drive this line; never
+improvise it from the transcript or the prose.** When `interpreted` is true, credit the interpreter in the
+es-AR message, e.g.:
+
+> 🗣️ Interpretación al español: _<interpreter.name>_
+
+When `interpreted` is false or absent, emit **no** such line (unchanged behavior). The interpreter is never
+presented as the preacher.
+
 ## Hard rules
 
 - **Never send.** No `wa.me` is opened, no message dispatched — you only write the text file and return it.
