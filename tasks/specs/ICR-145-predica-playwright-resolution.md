@@ -269,7 +269,7 @@ fixture would still fail.
 ## Testing Strategy
 
 **Automated (the AC4 net):** `pnpm predica:smoke`, wired into CI as job `predica-scripts`. It is a true
-end-to-end invocation — it would have caught this exact regression (ERR_MODULE_NOT_FOUND), _and_ catches
+end-to-end invocation — it would have caught this exact regression (`ERR_MODULE_NOT_FOUND`), _and_ catches
 a missing browser, a rotted fixture, and a broken renderer.
 
 **Why not a unit test:** there is no root test runner (root `pnpm test` proxies to Turbo, which has no

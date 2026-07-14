@@ -9,7 +9,7 @@
 
 - **Node 22.14.0** (`.nvmrc` — run `nvm use`).
 - **pnpm** as the package manager. Do not use `npm` or `yarn`.
-- A `.env` with the **required** variables — copy from `CLAUDE.md`'s env tables, **not** just from `.env.example` (which is incomplete; see below). Ask @gdamalis for the Contentful / Mailchimp / Mongo / mail-provider credentials.
+- A `.env` with the **required** variables — see `CLAUDE.md`'s env tables or copy from `.env.example`. Ask @gdamalis for the Contentful / Mongo / mail-provider credentials.
 
 ```bash
 nvm use

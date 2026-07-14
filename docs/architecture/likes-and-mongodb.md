@@ -31,7 +31,7 @@ type BroadcastLogStatus = "sending" | "sent" | "failed";
 interface BroadcastLogDocument {
   broadcastId: string; // unique (caller-supplied key, e.g. "blog:<slug>:<locale>")
   status: BroadcastLogStatus;
-  campaignId?: string; // Mailchimp campaign id, set on success
+  campaignId?: string; // Resend broadcast id, set on success
   reason?: string; // failure token, set on failure
   createdAt: Date;
   updatedAt: Date;
@@ -45,7 +45,7 @@ interface BroadcastLogDocument {
 **Claim semantics:** `claimBroadcast` uses an insert-first upsert filtered to
 `status: { $ne: "sent" }`. A doc that is already `sent` fails the filter, the upsert attempts an
 insert, the unique index throws E11000, and the engine interprets that as `already-sent` — no second
-Mailchimp send. A `failed` doc matches the filter and is re-claimed (retryable). No doc → upserted
+Resend broadcast. A `failed` doc matches the filter and is re-claimed (retryable). No doc → upserted
 as `sending`. This guarantees at-most-one campaign per `broadcastId` even under concurrent calls.
 
 See [`forms-and-email.md`](./forms-and-email.md#broadcast-engine-icr-29) for the full engine

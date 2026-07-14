@@ -39,7 +39,7 @@ IDC Redentor is the official bilingual (es-AR / en-US) website of Iglesia de Cri
 - **App Router**: pages under `src/app/[locale]/{page,who-is-jesus,community,come-meet-us,blog/[slug]}`; route handlers under `src/app/api/{likes,subscribe,revalidate,draft/{enable,disable}}`. No route groups; the contact form is a Server Action (`src/components/features/contact-form/contactFormAction.ts`).
 - **Contentful data layer (hand-written GraphQL, not an SDK)**: `lib/contentful/fetch.ts` (`fetchGraphQL`) → `lib/contentful/get*.ts` → RSC pages/components. Every request is tagged `next: { tags: ["site-content"] }`. **There is no codegen or generated client — it's all hand-written** (the unused `codegen.ts` + `@graphql-codegen/*` deps were removed).
 - **MongoDB** backs only two collections in db `website`: `likes` and `contact` (`src/service/database.service.ts` caches the client).
-- **Email**: adapter pattern (`src/service/mailing.service.ts` selects `mailing/{sendgrid,resend}.adapter.ts` by `MAIL_PROVIDER`); templates in `src/templates/`. **Newsletter** = **Resend** contacts with **per-locale audiences** (`/api/subscribe` → `src/service/subscribe.service.ts` → `resendAudience.ts`). _Mailchimp is gone_ — the `@mailchimp/*` dep + `MAILCHIMP_*` env vars are dead code pending removal (ICR-110).
+- **Email**: adapter pattern (`src/service/mailing.service.ts` selects `mailing/{sendgrid,resend}.adapter.ts` by `MAIL_PROVIDER`); templates in `src/templates/`. **Newsletter** = **Resend** contacts with **per-locale audiences** (`/api/subscribe` → `src/service/subscribe.service.ts` → `resendAudience.ts`).
 - **i18n**: next-intl, default `es-AR`, secondary `en-US`. Middleware in **`src/proxy.ts`** (exports `proxy`). UI strings in `public/locales/{es-AR,en-US}.json`.
 - **Revalidation**: `POST /api/revalidate` with header `x-vercel-reval-key === CONTENTFUL_REVALIDATE_SECRET` → `revalidateTag("site-content")`.
 - **Security/CSP**: `config/headers.js` (HSTS, X-Frame-Options, CSP allowlisting GTM/GA, Vercel, and Contentful image CDNs).
@@ -98,11 +98,6 @@ CRON_SECRET                          # Bearer secret Vercel Cron sends to the re
 PDF_REGEN_QUIET_WINDOW_SECONDS       # optional; debounce window, defaults to 90
 ```
 
-> ⚠️ **`MAILCHIMP_API_KEY` / `MAILCHIMP_API_SERVER` / `MAILCHIMP_AUDIENCE_ID` are DEAD.** The newsletter
-> moved to **Resend** (per-locale audiences). They are still declared in `src/types/environment.d.ts` and
-> listed in `.env.example`, but **nothing reads them** — setting them does nothing. ICR-110 removes them.
-> **Do not provision Mailchimp for a new deploy.**
->
 > `RESEND_AUDIENCE_ID` (no locale suffix) is a legacy single-audience fallback, used only for the
 > **default** locale when the per-locale var is unset (`src/service/resendAudience.ts`).
 

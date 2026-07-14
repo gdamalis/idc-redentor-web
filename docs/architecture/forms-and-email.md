@@ -63,10 +63,10 @@ The action is **locale-agnostic**: it returns a stable `messageKey` (one of `Con
 
 ## Newsletter subscribe (Resend — locale-aware)
 
-> **ICR-44:** `/api/subscribe` was repointed from Mailchimp to Resend Contacts. Mailchimp env vars are
-> kept in `.env.example` as a reference but are **no longer used** by the app; they can be removed when
-> the Mailchimp account is decommissioned (ICR-18). Existing Mailchimp subscribers are **not** migrated
-> — the Resend audiences populate exclusively from new signups (start fresh).
+> **ICR-44:** `/api/subscribe` writes to **Resend Contacts** (per-locale audiences). The previous
+> provider's package and env vars were removed in ICR-110; unsetting the leftover Vercel variables and
+> closing the old account is tracked in **ICR-156**. Subscribers were **not** migrated — the Resend
+> audiences populate exclusively from new signups (start fresh).
 
 ```
 Subscribe box (client, useLocale())
@@ -124,17 +124,19 @@ src/service/mailing.service.ts          sendEmail(content) + FROM_EMAIL default
 
 ## Required environment variables
 
-> All of these are **required at runtime but several are missing from `.env.example`** — flag and set them. Never put real values in docs or commits; reference names only.
+> All of these are **required at runtime**. Never put real values in docs or commits; reference names only.
 
-| Variable                                                               | Used by                                      | In `.env.example`? |
-| ---------------------------------------------------------------------- | -------------------------------------------- | :----------------: |
-| `MAIL_PROVIDER` (`sendgrid`\|`resend`)                                 | `mailing.service.ts`                         |     ❌ missing     |
-| `CONTACT_FORM_RECIPIENT_EMAIL`                                         | `contact-form-email.service.ts`              |     ❌ missing     |
-| `FROM_EMAIL`                                                           | `mailing.service.ts`                         |     ❌ missing     |
-| `SENDGRID_API_KEY`                                                     | `sendgrid.adapter.ts` (if provider=sendgrid) |     ❌ missing     |
-| `RESEND_API_KEY`                                                       | `resend.adapter.ts` (if provider=resend)     |     ❌ missing     |
-| `MONGODB_URI`                                                          | `contact.service.ts`                         |     ❌ missing     |
-| `MAILCHIMP_API_KEY` / `MAILCHIMP_API_SERVER` / `MAILCHIMP_AUDIENCE_ID` | `/api/subscribe`                             |     ✅ present     |
+| Variable                               | Used by                                               | In `.env.example`? |
+| -------------------------------------- | ----------------------------------------------------- | :----------------: |
+| `MAIL_PROVIDER` (`sendgrid`\|`resend`) | `mailing.service.ts`                                  |         ✅         |
+| `CONTACT_FORM_RECIPIENT_EMAIL`         | `contact-form-email.service.ts`                       |         ✅         |
+| `FROM_EMAIL`                           | `mailing.service.ts`                                  |         ✅         |
+| `SENDGRID_API_KEY`                     | `sendgrid.adapter.ts` (if provider=sendgrid)          |         ✅         |
+| `RESEND_API_KEY`                       | `resend.adapter.ts` (if provider=resend) + newsletter |         ✅         |
+| `MONGODB_URI`                          | `contact.service.ts`                                  |         ✅         |
+| `RESEND_AUDIENCE_ID_ES_AR`             | `/api/subscribe` → `resendAudience.ts` (`es-AR`)      |         ✅         |
+| `RESEND_AUDIENCE_ID_EN_US`             | `/api/subscribe` → `resendAudience.ts` (`en-US`)      |         ✅         |
+| `RESEND_AUDIENCE_ID`                   | legacy single-audience fallback (default locale only) |         ✅         |
 
 ## Broadcast engine (ICR-29)
 

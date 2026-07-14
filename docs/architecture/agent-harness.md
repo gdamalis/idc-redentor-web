@@ -286,7 +286,7 @@ guardrails:
   `qa-env.json` (gitignored); on absent creds the script exits 3 and the orchestrator falls back to
   `mcp__atlassian-divinelab__addCommentToJiraIssue`.
 - **Staging is `no-POST`** (`config.qa.env.staging.liveIntegrationPolicy`): no live happy-path POST to
-  `/api/subscribe` or `/api/contact` — Mailchimp/SendGrid/Resend are presumed LIVE on staging unless sandbox
+  `/api/subscribe` or `/api/contact` — SendGrid/Resend are presumed LIVE on staging unless sandbox
   creds exist, so forms are tested only up to the network boundary; full end-to-end form POST is **DEFERRED**.
 - **Mongo** is gated to a **test-DB-name allowlist**. Preview: `^website-(test|qa|e2e)$`. Staging:
   `^website-(test|qa|e2e|staging)$` — it **includes** the real `website-staging` DB (created + wired in
