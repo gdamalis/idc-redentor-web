@@ -2,6 +2,13 @@
 
 ### Bug Fixes
 
+- **ICR-137:** rewrite the privacy policy to describe real data handling ([#95](https://github.com/gdamalis/idc-redentor-web/issues/95)) ([ebd9fca](https://github.com/gdamalis/idc-redentor-web/commit/ebd9fcabe8cf1fa41c51cbdf3cd8954b328637ed))
+- **ICR-145:** resolve @playwright/test from the repo root for the predica scripts ([#93](https://github.com/gdamalis/idc-redentor-web/issues/93)) ([87193c9](https://github.com/gdamalis/idc-redentor-web/commit/87193c92e63d2d763adb7824ccfc1449697ab070))
+
+## [1.25.7](https://github.com/gdamalis/idc-redentor-web/compare/v1.25.6...v1.25.7) (2026-07-14)
+
+### Bug Fixes
+
 - **ICR-145:** resolve @playwright/test from the repo root for the predica scripts ([#93](https://github.com/gdamalis/idc-redentor-web/issues/93)) ([87193c9](https://github.com/gdamalis/idc-redentor-web/commit/87193c92e63d2d763adb7824ccfc1449697ab070))
 
 ## [1.25.6](https://github.com/gdamalis/idc-redentor-web/compare/v1.25.5...v1.25.6) (2026-07-14)
