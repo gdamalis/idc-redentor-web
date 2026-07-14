@@ -6,9 +6,9 @@
 **Goal:** Ship `docs/product/privacy-policy.md` — the canonical bilingual privacy copy that truthfully
 describes what the site does — so a human can paste it into Contentful and stop the live policy lying.
 
-**Architecture:** Documentation-only. Two files under `docs/product/`. **No `apps/web/**` source file is
-touched** — if you find yourself editing app code, stop: the plan is wrong. The full legal copy is already
-locked and approved in the spec's **Appendix A (es-AR)** and **Appendix B (en-US)**; your job is to
+**Architecture:** Documentation-only. Two files under `docs/product/`. No source file under the `apps/web`
+tree is touched — if you find yourself editing app code, stop: the plan is wrong. The full legal copy is
+already locked and approved in the spec's **Appendix A (es-AR)** and **Appendix B (en-US)**; your job is to
 transcribe it faithfully into the doc, not to rewrite it.
 
 **Tech Stack:** Markdown. Prettier (via husky/lint-staged on commit). No runtime surface.
@@ -27,9 +27,11 @@ Copied verbatim from the approved spec — these bind **every** task below.
 - **No `[...]` placeholder tokens** in the copy, in either locale.
 - **Effective date:** `14 de julio de 2026` (es-AR) / `July 14, 2026` (en-US). Editor-controlled — never
   derived from `sys.publishedAt`.
-- **Named processors (both locales):** Resend, MongoDB Atlas, Vercel, Google, Sentry, Contentful.
-  **SendGrid and Mailchimp must NOT be named** — SendGrid has no API key in any environment (dead config);
-  Mailchimp is dead code. Naming either would disclose a data flow that does not occur.
+- **Named processors — in EACH locale, independently:** Resend, MongoDB Atlas, Vercel, Google, Sentry,
+  Contentful. **SendGrid and Mailchimp must NOT be named _in the published policy copy_** — SendGrid has no
+  API key in any environment (dead config); Mailchimp is dead code. Naming either there would disclose a
+  data flow that does not occur. They **must** be named in the doc's rationale/maintenance sections, which
+  are not part of the published copy — see the Scoping note under Task 1 Step 1c.
 - **No compliance claims** — no Ley 25.326, no AAIP, no GDPR citations.
 - **Rich-text ceiling:** the copy may only use structures the Contentful renderer styles
   (`apps/web/lib/contentful/rich-text-options.tsx:27-69`): `HEADING_2`, `PARAGRAPH`, `UL_LIST`,
@@ -48,11 +50,13 @@ Copied verbatim from the approved spec — these bind **every** task below.
 ### Task 1: Author the canonical privacy-policy doc
 
 **Files:**
+
 - Create: `docs/product/privacy-policy.md`
 - Modify: `docs/product/README.md` (reading order list, and the `Last reviewed` footer date)
 - Test: none — see "Why there is no unit test" below.
 
 **Interfaces:**
+
 - Consumes: the approved copy from `tasks/specs/ICR-137-fix-published-privacy-policy.md` Appendix A + B.
 - Produces: `docs/product/privacy-policy.md` — the file the human publisher copy-pastes from, and the file
   the follow-up Contentful-publish ticket references.
@@ -75,7 +79,7 @@ Structure the file exactly as:
 > **This file is the source of truth for the privacy policy published at `/es-AR/privacidad` and
 > `/en-US/privacy`.** The live page is a Contentful entry (`churchInfoTopic`, id `2nFd6sF9w0BbrhWrYklPVD`),
 > which only a **human** can edit — so this doc is where the policy gets reviewed, diffed, and versioned.
-> When the policy changes, change it *here* first, then publish (see § Publishing runbook).
+> When the policy changes, change it _here_ first, then publish (see § Publishing runbook).
 > The copy below is deliberately, verifiably true about what the site does — see § Why this copy says what
 > it says.
 
@@ -118,22 +122,30 @@ Structure the file exactly as:
    `Privacy Policy` heading too.
 5. **Set the effective date** in both locales to the date you actually publish, if it is not
    `14 de julio de 2026` / `July 14, 2026`.
-6. **Publish** — verify `fieldStatus` shows *both* locales published, then load `/es-AR/privacidad` and
+6. **Publish** — verify `fieldStatus` shows _both_ locales published, then load `/es-AR/privacidad` and
    `/en-US/privacy` and confirm the section headings render as **headings** (not literal `##`), and that
    the footer links still resolve.
 
-Add a warning line: *paste as rich text — Contentful converts `##` to H2 and `**` to bold on paste; do not
-leave literal markdown characters in the field.*
+Add a warning line: _paste as rich text — Contentful converts `##` to H2 and `**` to bold on paste; do not
+leave literal markdown characters in the field._
 
 **Step 1c — the "Why this copy says what it says" section.** A compact table of the factual basis, each row
 citing the source file, lifted from spec §2. Cover: what each form collects and where it is stored; that
 newsletter emails live at **Resend, not in our DB**; the six named processors; the `_visitor_id` cookie
 (httpOnly, 1 year); what Decline actually does (stops GA **cookies**; does NOT stop GTM cookieless pings,
 Vercel Analytics/Speed Insights, or Sentry); and that **nothing is ever auto-deleted** (no TTL, no purge
-path). State plainly that SendGrid is **not** named because `SENDGRID_API_KEY` exists in no Vercel
-environment.
+path). Name **SendGrid** and **Mailchimp** explicitly here and say why each is excluded from the policy
+(SendGrid: `SENDGRID_API_KEY` set in no Vercel environment → dead config, cannot send. Mailchimp: legacy,
+no code path reads it, pending removal in ICR-110).
 
-**Step 1d — the "Maintenance triggers" section.** A short list: *this copy becomes wrong if* — the mail
+> **Scoping note (this is a real trap — lesson ICR-144).** The "must be absent" assertions in Step 2 apply
+> to the **published legal copy only** (the `# es-AR` → EOF span), **not** the whole file. The rationale and
+> maintenance sections above the copy _must_ be free to name SendGrid/Mailchimp and to quote the old
+> `(Español)` heading — that is exactly the context a future maintainer needs. A whole-file grep would force
+> those sections into euphemism ("the adapter with no live API key"), which is strictly worse for the reader
+> and would be a guaranteed false failure against correct prose.
+
+**Step 1d — the "Maintenance triggers" section.** A short list: _this copy becomes wrong if_ — the mail
 provider changes away from Resend; a TTL/purge path is added to `website.contact`/`website.likes`; Vercel
 Analytics/Sentry get consent-gated; a new third-party script is added; Sentry's `sendDefaultPii` is
 flipped on.
@@ -142,43 +154,57 @@ Then transcribe **Appendix A** and **Appendix B** verbatim under the `# es-AR` /
 
 - [ ] **Step 2: Write the content-assertion script and WATCH IT FAIL**
 
-The doc does not exist yet, so this must fail. Running it *first* is what makes it a real gate rather than
+The doc does not exist yet, so this must fail. Running it _first_ is what makes it a real gate rather than
 a rubber stamp.
 
 ```bash
 cat > /tmp/icr137-check.sh <<'SH'
 #!/usr/bin/env bash
-# ICR-137 acceptance criteria as binary checks. Exit 0 = all ACs hold.
-DOC="docs/product/privacy-policy.md"
+# ICR-137 acceptance criteria as binary checks.
+# SCOPING (lesson ICR-144): "must be absent" checks apply to the PUBLISHED LEGAL COPY only —
+# the rationale sections legitimately name SendGrid/Mailchimp to explain why they're excluded.
+# PER-LOCALE (mutation-proven): each processor is asserted present in the es-AR span AND the
+# en-US span SEPARATELY. A total-count>=2 heuristic passes vacuously when one locale is dropped.
+DOC="${1:-docs/product/privacy-policy.md}"
 fail=0
 pass() { echo "  ✓ $1"; }
 bad()  { echo "  ✗ $1"; fail=1; }
 
-# Guard: the check is meaningless if the file is missing (lesson ICR-144:
-# a negative assertion must first prove it OBSERVED something).
 [ -f "$DOC" ] || { echo "BLOCKED: $DOC does not exist"; exit 1; }
 [ -s "$DOC" ] || { echo "BLOCKED: $DOC is empty"; exit 1; }
 
-echo "== negative checks (must be ABSENT) =="
-grep -q 'idcredentor@gmail.com' "$DOC" && bad "old gmail address present" || pass "no idcredentor@gmail.com"
-grep -qE '\[(Fecha|Date|email de contacto|contact email)\]' "$DOC" && bad "placeholder token present" || pass "no [...] placeholders"
-grep -qi 'sendgrid'  "$DOC" && bad "SendGrid named (dead config)" || pass "SendGrid not named"
-grep -qi 'mailchimp' "$DOC" && bad "Mailchimp named (dead code)"  || pass "Mailchimp not named"
-grep -qi '(Español)' "$DOC" && bad "(Español) language tag present" || pass "no (Español) tag"
-grep -qiE 'Ley 25\.?326|AAIP|GDPR' "$DOC" && bad "compliance claim present" || pass "no compliance claims"
-grep -qi 'No compartimos su información personal con terceros' "$DOC" && bad "false sharing claim present" || pass "false sharing claim gone"
-grep -qi 'We do not share your personal information with third parties' "$DOC" && bad "false sharing claim (en) present" || pass "false sharing claim (en) gone"
+ES=$(awk '/^# es-AR$/,/^# en-US$/' "$DOC")
+EN=$(awk '/^# en-US$/,0'          "$DOC")
+COPY=$(awk '/^# es-AR$/,0'        "$DOC")
 
-echo "== positive checks (must be PRESENT, >=1) =="
-grep -q 'info@idcredentor.org' "$DOC" || bad "canonical email missing"; grep -q 'info@idcredentor.org' "$DOC" && pass "info@idcredentor.org present"
-grep -q 'Política de Privacidad' "$DOC" || bad "accented título missing"; grep -q 'Política de Privacidad' "$DOC" && pass "Política (accent) present"
-grep -q '14 de julio de 2026' "$DOC" || bad "es effective date missing"; grep -q '14 de julio de 2026' "$DOC" && pass "es effective date present"
-grep -q 'July 14, 2026' "$DOC" || bad "en effective date missing"; grep -q 'July 14, 2026' "$DOC" && pass "en effective date present"
-grep -q '_visitor_id' "$DOC" || bad "_visitor_id cookie undisclosed"; grep -q '_visitor_id' "$DOC" && pass "_visitor_id disclosed"
-for p in Resend "MongoDB Atlas" Vercel Google Sentry Contentful; do
-  n=$(grep -ci "$p" "$DOC")
-  [ "$n" -ge 2 ] && pass "$p named in both locales ($n hits)" || bad "$p named <2x (found $n) — must appear in BOTH locales"
-done
+# Positive controls: without these, every negative below could pass on an empty string.
+[ -n "$ES" ] && echo "$ES" | grep -q 'Fecha de vigencia' \
+  || { echo "BLOCKED: es-AR span not extracted (marker missing) — check is broken"; exit 1; }
+[ -n "$EN" ] && echo "$EN" | grep -q 'Effective date' \
+  || { echo "BLOCKED: en-US span not extracted (marker missing) — check is broken"; exit 1; }
+echo "spans: es-AR $(echo "$ES" | wc -l | tr -d ' ') lines / en-US $(echo "$EN" | wc -l | tr -d ' ') lines ✓"
+
+echo "== negative — PUBLISHED COPY must not contain =="
+echo "$COPY" | grep -qE '\[(Fecha|Date|email de contacto|contact email)\]' && bad "placeholder token" || pass "no [...] placeholders"
+echo "$COPY" | grep -qi 'sendgrid'  && bad "SendGrid named in the policy"  || pass "SendGrid not named in the policy"
+echo "$COPY" | grep -qi 'mailchimp' && bad "Mailchimp named in the policy" || pass "Mailchimp not named in the policy"
+echo "$COPY" | grep -q  '(Español)' && bad "(Español) tag in the policy"   || pass "no (Español) tag in the policy"
+echo "$COPY" | grep -qiE 'Ley 25\.?326|AAIP|GDPR' && bad "compliance claim" || pass "no compliance claims"
+echo "$COPY" | grep -qi 'No compartimos su información personal con terceros' && bad "false sharing claim (es)" || pass "false sharing claim (es) gone"
+echo "$COPY" | grep -qi 'We do not share your personal information with third parties'  && bad "false sharing claim (en)" || pass "false sharing claim (en) gone"
+grep -q 'idcredentor@gmail.com' "$DOC" && bad "old gmail address present ANYWHERE" || pass "no idcredentor@gmail.com anywhere in the file"
+
+echo "== positive — EACH LOCALE independently =="
+check_both() { # $1=needle-es $2=needle-en $3=label
+  echo "$ES" | grep -qi "$1" || bad "$3 missing from es-AR"
+  echo "$EN" | grep -qi "$2" || bad "$3 missing from en-US"
+  { echo "$ES" | grep -qi "$1" && echo "$EN" | grep -qi "$2"; } && pass "$3 in BOTH locales"
+}
+check_both 'info@idcredentor.org' 'info@idcredentor.org' "canonical email"
+check_both '_visitor_id'          '_visitor_id'          "_visitor_id cookie"
+check_both '14 de julio de 2026'  'July 14, 2026'        "effective date"
+for p in Resend "MongoDB Atlas" Vercel Google Sentry Contentful; do check_both "$p" "$p" "processor: $p"; done
+echo "$ES" | grep -q 'Política de Privacidad' && pass "Política (accent) in es-AR h1 note" || bad "accented título missing"
 
 [ $fail -eq 0 ] && echo "ALL CHECKS PASS" || echo "FAILURES PRESENT"
 exit $fail
@@ -190,7 +216,7 @@ chmod +x /tmp/icr137-check.sh
 Expected on first run (before the doc exists): `BLOCKED: docs/product/privacy-policy.md does not exist`,
 exit 1.
 
-**STOP CONDITION:** if this somehow *passes* before you have written the doc, the script is broken — a
+**STOP CONDITION:** if this somehow _passes_ before you have written the doc, the script is broken — a
 grep that errors prints nothing and reads exactly like a clean negative (lesson ICR-103). Fix the script,
 do not proceed.
 
@@ -238,6 +264,7 @@ Note: husky `lint-staged` runs Prettier on commit. If it reformats the files, th
 **Files:** none (verification only).
 
 **Interfaces:**
+
 - Consumes: the committed doc from Task 1.
 - Produces: evidence that a docs-only change broke nothing — required before the PR is marked ready.
 

@@ -11,8 +11,9 @@
 
 1. Open Contentful → space `vg9le24yw8hb` → environment **`production`** → entry `2nFd6sF9w0BbrhWrYklPVD`.
 2. **es-AR `name`:** change `Politica de Privacidad` → `Política de Privacidad` (add the accent).
-3. **es-AR `body`:** replace the whole field with the **es-AR** copy below. Delete the old opening
-   heading that duplicated the title with a language tag — the page already renders the title from `name`.
+3. **es-AR `body`:** replace the whole field with the **es-AR** copy below. Delete the old opening H3
+   heading `Política de Privacidad (Español)` — it duplicated the title and pointlessly tagged the language
+   of a page that is already served per-locale. The page renders its title from `name`.
 4. **en-US `body`:** replace the whole field with the **en-US** copy below. Delete its duplicate
    `Privacy Policy` heading too.
 5. **Set the effective date** in both locales to the date you actually publish, if it is not
@@ -40,18 +41,25 @@ code, the code wins.
 | Nothing is ever auto-deleted (no TTL, no purge path)                                                                 | Grep of `apps/web/src` for `expireAfterSeconds`/`deleteMany`/`deleteOne` against `website.contact`/`website.likes`: zero hits        |
 | Sentry's PII posture is locked (no identities, no form contents)                                                     | `apps/web/src/utils/sentry/options.ts:91-92` (`sendDefaultPii: false`, `dataCollection.userInfo: false`)                             |
 
-**Only these six are named — deliberately, not two others.** Two email-related integrations exist in the
-codebase but are excluded from the copy on purpose: the transactional-email adapter that has no live API
-key in any Vercel environment (Production, Preview, staging, Development) — dead config that cannot
-actually send anything — and the legacy newsletter integration no code path reads anymore, pending removal
-(ICR-110). Naming either would disclose a data flow that does not occur.
+**Only these six are named — deliberately, and two others are not.** SendGrid and Mailchimp both exist in
+the codebase, and both are excluded from the policy on purpose:
+
+- **SendGrid** — the alternate transactional-email adapter (`apps/web/src/service/mailing/sendgrid.adapter.ts`).
+  `SENDGRID_API_KEY` is set in **no** Vercel environment (Production, Preview, staging, Development), so the
+  adapter physically cannot send mail: it is dead config. The live provider is Resend.
+- **Mailchimp** — the legacy newsletter integration. No code path reads it any more; the dependency and its
+  `MAILCHIMP_*` env vars are pending removal (ICR-110).
+
+Naming either in the policy would disclose a data flow that **does not occur** — the same category of false
+statement this document exists to remove. If SendGrid is ever given a live API key, the policy must name it
+**before** that key is set.
 
 ## Maintenance triggers
 
 This copy becomes wrong — and must be revised — if any of the following happen:
 
-- The mail provider changes away from **Resend** (e.g. an alternate adapter becomes live, or a new
-  provider is added).
+- The mail provider changes away from **Resend** — e.g. SendGrid is given a live `SENDGRID_API_KEY`, or a
+  new provider is added.
 - A TTL or purge path is added to `website.contact` or `website.likes` (today, nothing is auto-deleted).
 - **Vercel Analytics/Speed Insights** or **Sentry** become consent-gated (today, both are always on).
 - A new third-party script or processor is added to the site.
