@@ -3,7 +3,7 @@
 > **Monorepo note:** the site moved to **`apps/web/`**. App paths in this doc (`src/…`, `lib/…`, `public/…`, `config/…`, `scripts/contentful/…`, `next.config.ts`, `tsconfig.json`, …) now live under `apps/web/`; only `.claude/`, `docs/`, and `tasks/` stay at the repo root. Run commands at the root (Turbo proxies them) or scope to the site with `pnpm --filter @idcr/web <task>` / `pnpm -C apps/web <cmd>`.
 
 > **Purpose:** The only stateful part of the app. How the cached MongoDB client works, the four collections it backs (`likes`, `contact`, `broadcast_log`, `pdf_jobs`), the anonymous like toggle and its visitor de-dup, and the write-safety considerations.
-> **Last reviewed:** 2026-07-05
+> **Last reviewed:** 2026-07-14
 
 ## Scope: this is the whole database
 
@@ -123,7 +123,7 @@ Key points:
 
 - **Single cached client.** In development it's stashed on `globalThis._mongoClient` so Hot Module Reload doesn't open a new pool on every edit. In production it's a module-level singleton. This is the standard Next.js + MongoDB pattern and avoids connection-pool exhaustion.
 - **`MONGODB_OPTIONS`** pins the Stable API (`serverApi: { version: v1, strict: true, deprecationErrors: true }`).
-- **`connect()` returns the client or `undefined` on failure** (it catches and logs). Callers must null-check — every service does `if (!client) throw new Error("Failed to connect to database")`.
+- **`connect()` returns the client or `undefined` on failure** (it catches and logs) — this contract is **unchanged**. **Most callers still null-check and throw**: `contact.service`, `predica/pdfJobs`, and `broadcast/broadcastLog` all do `if (!client) throw new Error("Failed to connect to database")` — a dropped contact message, a stuck PDF job, or a lost broadcast claim is a real bug that should be loud. **The likes path is the deliberate exception (ICR-111)** — it reacts to that same `!client` signal by failing soft instead of throwing. See [The fail-soft likes contract](#the-fail-soft-likes-contract-icr-111) below.
 - **`MONGODB_URI` is required at runtime but missing from `.env.example`.** Set it. Never commit a real URI.
 
 ## The like feature
@@ -146,7 +146,7 @@ A like is **anonymous and per-visitor**, deduped by a `visitors` array rather th
 - **`GET /api/likes?slug=…`** → returns `{ count, hasLiked }`. `hasLiked` reflects whether the request's `_visitor_id` cookie is in the post's `visitors`.
 - **`POST /api/likes`** with `{ slug }` → toggles the like for this visitor and returns the new `{ count, hasLiked }`.
 - The visitor id lives in the **`_visitor_id` cookie**: `httpOnly`, `sameSite: "lax"`, `secure` in production, `maxAge` one year, `path: "/"`. If a POSTing visitor has no cookie yet, the route mints a UUID (`crypto.randomUUID()`) and sets the cookie on the response.
-- Both handlers `await cookies()` (per the always-await-runtime-APIs convention) and return structured JSON with `400` for a missing slug and `500` on error.
+- Both handlers `await cookies()` (per the always-await-runtime-APIs convention) and return structured JSON: `400` for a missing/invalid slug, **`503`** when the likes DB is unavailable, and `500` only for a genuinely unexpected error (e.g. a malformed JSON body on `POST`). See [The fail-soft likes contract](#the-fail-soft-likes-contract-icr-111) below.
 
 ### The toggle (`like.service.ts#toggleLike`)
 
@@ -156,6 +156,76 @@ A like is **anonymous and per-visitor**, deduped by a `visitors` array rather th
 - **Not yet liked** → `$addToSet` the visitor, `$inc` count by `+1`, set `updatedAt`, `$setOnInsert: { slug }` with `{ upsert: true }` so the first like on a post creates the doc.
 
 It returns an optimistic `{ count: Math.max(prevCount ± 1, 0), hasLiked: !alreadyLiked }`. `count` is floored at 0 so it can't go negative.
+
+### The fail-soft likes contract (ICR-111)
+
+`getLikes()` and `toggleLike()` **never throw**. Both return a discriminated union:
+
+```ts
+export interface Likes {
+  readonly count: number;
+  readonly hasLiked: boolean;
+}
+
+type LikesOutcome =
+  | ({ readonly ok: true } & Likes)
+  | { readonly ok: false; readonly reason: "db-unavailable" };
+```
+
+Both the `!client` branch (connect failed) **and** the query `try/catch` (connect succeeded, the query
+itself threw) resolve to the same `{ ok: false, reason: "db-unavailable" }` — still `console.error`-ing
+the underlying error, just no longer rethrowing it.
+
+**Why both branches, not just `!client`.** `connect()` pings on every call, so a Mongo that is
+reachable-but-unusable passes `connect()` and then throws at query time. Fixing only the `!client`
+branch would leave that 500 path wide open. This is not hypothetical — it is exactly what happens on
+Vercel preview today (see below).
+
+**HTTP mapping (`api/likes/route.ts`):** `!outcome.ok` → **503** `{ error: "Service Unavailable" }`
+(transient/retryable) — never a fabricated `count: 0`. The outer `try/catch` in each handler still
+returns **500**, so a genuine bug (e.g. a malformed `POST` body) is not laundered into a "retry me" 503.
+On the `POST` failure path the route returns _before_ setting the `_visitor_id` cookie — no visitor id
+is minted for a like that didn't land.
+
+The 200 wire body is unchanged — exactly `{ count, hasLiked }`. The `ok` discriminant is stripped
+before the response, so `LikeButton`'s `toggleLikeApi` needed no change, and its existing
+revert-on-`!response.ok` handling silently covers a 503 too.
+
+**Render path:** `PostActions` takes a single optional `likes?: Likes` prop instead of separate
+`initialLikeCount` / `initialHasLiked` props. Absent `likes` ⇒ the likes DB was unavailable ⇒ no
+`<LikeButton>` renders at all; `<ShareButton>` always renders. This makes a fabricated `count: 0`
+**unrepresentable in the type system**, not merely discouraged by convention.
+
+**No error boundary to fall back on.** `apps/web/src/app` has no `error.tsx` / `global-error.tsx`
+anywhere, so an unguarded throw in an RSC hard-500s the whole page — there is no boundary to catch it.
+That is why the likes path fails soft at the **service** boundary rather than relying on a React error
+boundary: there isn't one to rely on. (A global error boundary is tracked as a separate, deferred ticket.)
+
+**Product rationale.** The like is the site's single interactive reader feature and explicitly
+"lightweight" (`docs/product/scope-and-boundaries.md`). It must never be able to take down the article.
+A missing heart is invisible; a 500 is a broken site.
+
+### Vercel preview: a real likes-DB outage, but not the one you'd guess
+
+On **Vercel preview**, `MONGODB_URI` **is** set and `connect()` **succeeds** — it pings `admin` and logs
+`Connected to database`. The failure is one level deeper: the Atlas user preview connects as is **not
+authorized to `find` on `website.likes`**, so the _query_ throws:
+
+```
+Error fetching likes: MongoServerError: user is not allowed to do action [find] on [website.likes]
+  code: 8000, codeName: 'AtlasError'
+```
+
+Three consequences worth stating plainly:
+
+1. **Preview is a permanent, faithful reproduction of a likes-DB outage** — useful as a test bed. No
+   mocking needed: every preview request already exercises the real fail-soft path end to end.
+2. **The healthy-Mongo path cannot be exercised on preview** and must be verified on staging instead,
+   which has its own `website-staging` database with the correct grants.
+3. **A connect-only fail-soft (handling only `!client`) would have been a no-op on preview** —
+   `connect()` already succeeds there. Every blog and sermon article page would still have 500'd, because
+   the failure lives in the query `try/catch`, not the connect check. This is why the fail-soft contract
+   above covers both branches.
 
 ## Write-safety & known limitations
 
