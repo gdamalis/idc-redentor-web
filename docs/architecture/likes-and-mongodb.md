@@ -194,10 +194,16 @@ revert-on-`!response.ok` handling silently covers a 503 too.
 `<LikeButton>` renders at all; `<ShareButton>` always renders. This makes a fabricated `count: 0`
 **unrepresentable in the type system**, not merely discouraged by convention.
 
-**No error boundary to fall back on.** `apps/web/src/app` has no `error.tsx` / `global-error.tsx`
-anywhere, so an unguarded throw in an RSC hard-500s the whole page — there is no boundary to catch it.
-That is why the likes path fails soft at the **service** boundary rather than relying on a React error
-boundary: there isn't one to rely on. (A global error boundary is tracked as a separate, deferred ticket.)
+**An error boundary is a whole-page fallback; it cannot degrade a single widget.** If a likes failure
+threw, the nearest boundary (`[locale]/error.tsx`) would replace the ENTIRE ARTICLE with an error
+screen — the reader loses the content they came for, over a missing heart. Failing soft at the
+**service** boundary is what lets the article render completely and drop only the `<LikeButton>`.
+Error boundaries are the backstop for _unexpected_ faults; a known-unavailable likes DB is an
+_expected_ degradation and belongs in the data layer's contract, not in a boundary. Worth noting:
+`[locale]/error.tsx` does not catch a throw from its own segment's `layout.tsx` — only
+`global-error.tsx` does, and `global-error.tsx` replaces the root layout, so it has no providers (no
+i18n, no theme) and must hardcode its copy. Boundaries are a blunt instrument here, which reinforces
+the same conclusion.
 
 **Product rationale.** The like is the site's single interactive reader feature and explicitly
 "lightweight" (`docs/product/scope-and-boundaries.md`). It must never be able to take down the article.

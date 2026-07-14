@@ -9,16 +9,26 @@
 
 - **Node 22.14.0** (`.nvmrc` — run `nvm use`).
 - **pnpm** as the package manager. Do not use `npm` or `yarn`.
-- A `.env` with the **required** variables — copy from `CLAUDE.md`'s env tables, **not** just from `.env.example` (which is incomplete; see below). Ask @gdamalis for the Contentful / Mailchimp / Mongo / mail-provider credentials.
+- A `.env` with the **required** variables — copy `apps/web/.env.example` to `apps/web/.env` and fill in the values, using `CLAUDE.md`'s env tables as the reference for what each var means. Ask @gdamalis for the Contentful / Mailchimp / Mongo / mail-provider credentials.
 
 ```bash
 nvm use
 pnpm install            # at the repo root — runs husky via the prepare script (whole workspace)
-cp apps/web/.env.example apps/web/.env    # then fill in the MISSING required vars (see CLAUDE.md)
+cp apps/web/.env.example apps/web/.env    # then fill in the required vars (see CLAUDE.md)
 pnpm dev                # at the repo root (Turbo proxies) — or scope with: pnpm --filter @idcr/web dev
 ```
 
-> ⚠️ **`.env.example` is incomplete.** It omits several runtime-required variables (`CONTENTFUL_REVALIDATE_SECRET`, `MONGODB_URI`, `MAIL_PROVIDER`, `CONTACT_FORM_RECIPIENT_EMAIL`, `FROM_EMAIL`, `SENDGRID_API_KEY`/`RESEND_API_KEY`). Bringing `.env.example` in line with `src/types/environment.d.ts` is a good starter ticket. **Never commit real secret values.**
+> ⚠️ **`.env.example` is current.** It carries every runtime variable (it was brought up to date in
+> ICR-114) — copy it as-is and fill in the values. **Never commit real secret values.**
+
+> ⚠️ **Env files live in `apps/web/`, not the repo root.** Next.js loads `.env*` from the **app**
+> directory (`apps/web/`), which is also Vercel's Root Directory. A `.env.local` placed at the
+> **repo root is silently ignored** — nothing reads it. The symptom is a local `pnpm build` failing
+> with `TypeError: Invalid URL` (input `'undefined'`) from
+> `new URL(process.env.NEXT_PUBLIC_BASE_URL!)` in `apps/web/src/app/[locale]/layout.tsx`. This has
+> repeatedly been misdiagnosed as a "pre-existing local build limitation" — it is not; the env file
+> is just in the wrong directory. Put it at `apps/web/.env.local` (or `apps/web/.env`) and the
+> production build succeeds.
 
 ## Quality gates (run before pushing)
 
