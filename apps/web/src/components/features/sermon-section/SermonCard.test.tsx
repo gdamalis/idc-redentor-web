@@ -54,6 +54,7 @@ const baseSermon: Sermon = {
     name: "Pastor Juan",
     email: "juan@example.com",
   },
+  audioLanguages: ["es-AR"],
   thesis: "La gracia es suficiente",
   mainPoints: [],
   excerpt: "Un mensaje sobre la gracia.",

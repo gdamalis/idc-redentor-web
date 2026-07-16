@@ -32,7 +32,12 @@
     "header-title": "Prédicas",
     "header-subtitle": "Mensajes de nuestros cultos dominicales",
     "preached-by": "Predicado por",
-    "audio-in-spanish": "El audio de esta prédica está en español.",
+    "interpreted-by": "Interpretado por",
+    "audio-language": {
+      "es": "El audio de esta prédica está en español.",
+      "en": "El audio de esta prédica está en inglés.",
+      "bilingual": "El audio de esta prédica está en español e inglés."
+    },
     "play": "Reproducir",
     "pause": "Pausar",
     "seek": "Buscar",

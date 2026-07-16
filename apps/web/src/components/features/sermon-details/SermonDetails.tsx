@@ -3,6 +3,11 @@ import { getTranslations } from "next-intl/server";
 import { PostActions } from "@src/components/features/blog-post-details/PostActions";
 import type { Sermon } from "@src/types/Sermon";
 import type { Likes } from "@src/service/like.service";
+import {
+  getAudioLanguageNotice,
+  type AudioLanguageNotice,
+} from "@src/utils/sermon/audioLanguage";
+import { i18n, isValidLocale } from "@src/i18n/config";
 import { SermonHeader } from "./SermonHeader";
 import { SermonAudioPlayer } from "./SermonAudioPlayer";
 import { SermonContent } from "./SermonContent";
@@ -17,6 +22,12 @@ interface SermonDetailsProps {
   readonly likes?: Likes;
 }
 
+const AUDIO_LANGUAGE_KEYS = {
+  es: "audio-language.es",
+  en: "audio-language.en",
+  bilingual: "audio-language.bilingual",
+} as const satisfies Record<Exclude<AudioLanguageNotice, null>, string>;
+
 export default async function SermonDetails({
   sermon,
   relatedSermons,
@@ -26,7 +37,11 @@ export default async function SermonDetails({
   if (!sermon) return null;
 
   const t = await getTranslations("Sermons");
-  const isEnUs = locale === "en-US";
+  const pageLocale = isValidLocale(locale) ? locale : i18n.defaultLocale;
+  const audioLanguageNotice = getAudioLanguageNotice(
+    sermon.audioLanguages,
+    pageLocale,
+  );
 
   return (
     <Container className="pt-28 pb-20 lg:py-32">
@@ -43,10 +58,14 @@ export default async function SermonDetails({
           />
         )}
 
-        {/* 3. Audio-in-Spanish note (audio present AND locale is en-US) */}
-        {sermon.audio && isEnUs && (
+        {/* 3. Audio-language notice — driven ENTIRELY by `audioLanguages`.
+            Renders only when the audio's language differs from the page's, so a
+            Spanish sermon on the Spanish page stays clean. This SUPERSEDES the old
+            hardcoded `audio-in-spanish` note, which told every en-US reader the
+            audio was Spanish even when it was not (ICR-146 AC4). */}
+        {sermon.audio && audioLanguageNotice && (
           <p className="text-sm text-muted-foreground">
-            {t("audio-in-spanish")}
+            {t(AUDIO_LANGUAGE_KEYS[audioLanguageNotice])}
           </p>
         )}
 

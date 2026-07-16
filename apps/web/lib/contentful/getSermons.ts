@@ -1,6 +1,7 @@
 import { fetchGraphQL } from "./fetch";
 import { isValidSlug } from "./slug";
 import { isValidLocale } from "@src/i18n/config";
+import { normalizeAudioLanguages } from "@src/utils/sermon/audioLanguage";
 import type { Sermon } from "@src/types/Sermon";
 
 const GRAPHQL_FIELDS = `
@@ -39,6 +40,7 @@ const GRAPHQL_FIELDS = `
     fileName
     size
   }
+  audioLanguages
   pdfSummary {
     url
     title
@@ -47,6 +49,16 @@ const GRAPHQL_FIELDS = `
     size
   }
   preacher {
+    ... on Author {
+      name
+      avatar {
+        url
+        title
+      }
+      email
+    }
+  }
+  interpreter {
     ... on Author {
       name
       avatar {
@@ -174,6 +186,15 @@ function mapSermon(item: Record<string, unknown>): Sermon {
     sermonDate: item.sermonDate as string,
     preacher: item.preacher as Sermon["preacher"],
     additionalPreachers: additionalPreacherItems as Sermon["additionalPreachers"],
+    // NOTE: mapSermon serves BOTH the detail query (GRAPHQL_FIELDS, which requests
+    // audioLanguages) and the archive query (SERMON_CARD_FIELDS, which does not).
+    // Card results therefore get the ["es-AR"] default for a field they never
+    // fetched. That is harmless — no card renders it — and deliberate: keeping the
+    // field non-optional means no consumer has to handle `undefined`.
+    audioLanguages: normalizeAudioLanguages(
+      item.audioLanguages as string[] | undefined,
+    ),
+    interpreter: item.interpreter as Sermon["interpreter"],
     scriptureReferences: scriptureItems as Sermon["scriptureReferences"],
     thesis: item.thesis as string,
     mainPoints: (item.mainPoints as string[]) ?? [],

@@ -32,7 +32,12 @@
     "header-title": "Sermons",
     "header-subtitle": "Messages from our Sunday services",
     "preached-by": "Preached by",
-    "audio-in-spanish": "This sermon's audio is in Spanish.",
+    "interpreted-by": "Interpreted by",
+    "audio-language": {
+      "es": "This sermon's audio is in Spanish.",
+      "en": "This sermon's audio is in English.",
+      "bilingual": "This sermon's audio is in Spanish and English."
+    },
     "play": "Play",
     "pause": "Pause",
     "seek": "Seek",

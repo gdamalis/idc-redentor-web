@@ -3,7 +3,7 @@
 > **Monorepo note:** the site moved to **`apps/web/`**. App paths in this doc (`src/…`, `lib/…`, `public/…`, `config/…`, `scripts/contentful/…`, `next.config.ts`, `tsconfig.json`, …) now live under `apps/web/`; only `.claude/`, `docs/`, and `tasks/` stay at the repo root. Run commands at the root (Turbo proxies them) or scope to the site with `pnpm --filter @idcr/web <task>` / `pnpm -C apps/web <cmd>`.
 
 > **Purpose:** How content gets from Contentful onto a page — the hand-written GraphQL convention in `lib/contentful/`, the single `site-content` cache tag, draft/preview, and on-demand revalidation. Also: why `codegen.ts` is irrelevant.
-> **Last reviewed:** 2026-07-05
+> **Last reviewed:** 2026-07-14
 
 ## The shape of it
 
@@ -55,7 +55,7 @@ Three things to internalize:
 
 ## The getter convention
 
-Each getter follows the same template (see `lib/contentful/getPage.ts`, `getBlogPostPages.ts`, `getContentCollection.ts`, `getEventBanner.ts`, `getFooter.ts`, `getNavigationMenu.ts`, `getSeo.ts`, `getContactForm.ts`, plus the per-component getters `getCtaComponent`, `getDuplexComponent`, `getHeroBannerComponent`, `getTextBlockComponent`, `getSingleEmailForm`):
+Each getter follows the same template (see `lib/contentful/getPage.ts`, `getBlogPostPages.ts`, `getContentCollection.ts`, `getEventBanner.ts`, `getFooter.ts`, `getNavigationMenu.ts`, `getSeo.ts`, `getContactForm.ts`, `getSermons.ts`, plus the per-component getters `getCtaComponent`, `getDuplexComponent`, `getHeroBannerComponent`, `getTextBlockComponent`, `getSingleEmailForm`):
 
 ```ts
 import { fetchGraphQL } from "./fetch";
@@ -287,3 +287,67 @@ wrong (old) one just because it inherited the alias default.
 4. Render it from the appropriate RSC under `src/app/[locale]/`, passing `locale` and `await shouldUseDraftMode()`.
 5. If it's part of a `Page`'s section unions, add an inline fragment in `getPage.ts` and a branch in the component resolver.
 6. Confirm the Contentful publish webhook is wired (it already revalidates `"site-content"`, so no per-type wiring is needed).
+
+## Adding a field to an existing type's `GRAPHQL_FIELDS` — the whole-query trap
+
+Because every getter hand-assembles its own GraphQL query string, adding a field to an **existing**
+type is a two-step change with an ordering hazard that a codegen-based data layer would catch at
+build time and this one does not:
+
+1. Add the field to the type in Contentful (a `contentful-migration` script under
+   `scripts/contentful/migrations/`).
+2. Add the field name to the getter's `GRAPHQL_FIELDS` constant.
+
+**Do these out of order — ship step 2 to an environment that hasn't had step 1 applied — and the
+whole query breaks, not just the new field.** Contentful's GraphQL API validates the query against
+the content model of the environment it targets; a field that does not exist there fails the
+_entire_ document (`Cannot query field "x" on type "Y"`). `fetchGraphQL` never throws on a GraphQL
+`errors` payload — it just resolves to `{ data: null, errors: [...] }` — so every getter's
+null-safe reach-in (`data?.data?.<collection>?.items`) quietly returns `undefined` / `[]`, with
+**no error surfaced anywhere** in logs or in what the page renders. Concretely, for a broken sermon
+query: `getSermon()` → `undefined` → every sermon detail page 404s; `getAllSermons()` → `[]` → the
+archive renders empty; `getLatestSermons()` → `[]` → the home-page sermon section empties too.
+
+**The rule this creates, for every future field addition, not just this one:** a Contentful model
+change must be **promoted to the environment the running code reads from _before_** that code is
+deployed there — never after. For the ordinary small/additive case, that means Contentful **Merge**
+`staging → production` lands **before** the PR's prod deploy, per the "Scenario B" playbook in
+`docs/architecture/contentful-environments.md`. There is no schema check at build time and no
+codegen to catch a mismatch early (see "Ignore `codegen.ts`" above) — a bad ordering only surfaces
+at request time, in production, as a page that silently 404s or a list that silently empties.
+
+### Worked example — sermon `audioLanguages` + `interpreter` (ICR-146)
+
+`sermon` gained two additive, optional, non-localized fields
+(`lib/contentful/getSermons.ts`, `src/types/Sermon.ts`):
+
+- **`audioLanguages`** — `Array<Symbol>`, items validated `in: ["es-AR", "en-US"]`. It is an
+  **array, not an enum with a `"bilingual"` member**: "bilingual" isn't a language the recording is
+  _in_, it's a fact about which languages _are_ in it, and an array absorbs a third language later
+  (e.g. a guest preacher's own language) with no breaking schema change — an enum would need a new
+  member for every language combination.
+- **`interpreter`** — `Link<Entry> -> author`, structurally identical to `preacher`. It is
+  deliberately its **own field, not a third entry in `additionalPreachers`**: an interpreter did
+  not preach the message, and folding them into the preacher byline would misattribute the sermon's
+  authorship to someone who was relaying it live, not delivering it. Keeping it separate is also
+  what lets `SermonHeader` render a distinctly-labeled "Interpretado por" credit instead of a
+  preacher name.
+
+**The `absent ⇒ ["es-AR"]` default survives the backfill — it is not a one-time migration shim.**
+`normalizeAudioLanguages()` (`src/utils/sermon/audioLanguage.ts`), called from `mapSermon()`, treats
+an absent, empty, or all-unrecognized `audioLanguages` as `["es-AR"]`. That default has to keep
+working forever, not just until the backfill migration (`13b-backfill-sermon-audio.mjs`) runs once:
+a human editing a sermon in the Contentful web app can leave the field blank, and — until ICR-147
+wires it into `/predica` — a sermon created by the pipeline will too. Every sermon must stay
+renderable with the field entirely absent, indefinitely.
+
+**Staging is a content-_model_ work env, not a content mirror — plan data-migration validation
+accordingly.** At the time this backfill script was validated, `staging` held 1 sermon entry
+against production's 5, and did not contain the one entry that exercises the script's riskiest
+paths (removing a hand-written interpreter blockquote; the republish-only-if-already-published
+rule). A `--dry-run` of a data-migration script against `staging` cannot validate paths that
+`staging`'s content doesn't exercise — there's no substitute for real data. What validated those
+paths instead: unit tests pinned against the real rich-text document copied verbatim from the live
+production entry, including a negative control proving a legitimate closing scripture blockquote
+survives. A human-run `--dry-run` against `production` — right before the real run, at cutover — is
+still the last check; it validates the plan against the actual data the script will touch.

@@ -61,6 +61,7 @@ function fixtureSermon(overrides: Partial<Sermon> = {}): Sermon {
     sermonDate: "2026-01-01",
     preacher: { name: "Pastor Test", email: "pastor@example.com" },
     additionalPreachers: [],
+    audioLanguages: ["es-AR"],
     scriptureReferences: [],
     thesis: "",
     mainPoints: [],

@@ -1,3 +1,5 @@
+import type { Locale } from "@src/i18n/config";
+
 export interface ScriptureRef {
   book: string;
   chapter: number;
@@ -7,30 +9,40 @@ export interface ScriptureRef {
   bibleVersion: string;
 }
 
+/** The author shape shared by `preacher`, `additionalPreachers` and `interpreter`. */
+export interface SermonAuthor {
+  name: string;
+  avatar?: {
+    url: string;
+    title: string;
+  };
+  email: string;
+}
+
 export interface Sermon {
   title: string;
   slug: string;
   sermonDate: string;
-  preacher: {
-    name: string;
-    avatar?: {
-      url: string;
-      title: string;
-    };
-    email: string;
-  };
+  preacher: SermonAuthor;
   /**
    * Co-preachers for a multi-preacher service (optional). When present, the byline
    * lists `[preacher, ...additionalPreachers]`; absent for normal single-author sermons.
    */
-  additionalPreachers?: Array<{
-    name: string;
-    avatar?: {
-      url: string;
-      title: string;
-    };
-    email: string;
-  }>;
+  additionalPreachers?: SermonAuthor[];
+
+  /**
+   * Languages spoken in the audio recording. NON-LOCALIZED in Contentful: one
+   * recording serves both locale pages, so both pages see the same value.
+   * The mapper guarantees a non-empty array (absent/empty => ["es-AR"]), so
+   * consumers never handle undefined.
+   */
+  audioLanguages: Locale[];
+
+  /**
+   * The live interpreter, when the message was interpreted into another language.
+   * NOT a preacher: never add this person to the preacher byline (ICR-146 AC3).
+   */
+  interpreter?: SermonAuthor;
   scriptureReferences?: ScriptureRef[];
   thesis: string;
   mainPoints: string[];

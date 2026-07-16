@@ -96,6 +96,7 @@ function makeSermon(overrides: Partial<Sermon> = {}): Sermon {
     slug: "el-amor-de-dios",
     sermonDate: "2026-06-07",
     preacher: { name: "Juan Pérez", email: "juan@example.com" },
+    audioLanguages: ["es-AR"],
     scriptureReferences: [
       {
         book: "Juan",

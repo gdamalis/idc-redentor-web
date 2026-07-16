@@ -32,6 +32,7 @@ const FULL_SERMON: Sermon = {
     avatar: { url: "https://images.ctfassets.net/avatar.jpg", title: "Juan García" },
     email: "juan@example.com",
   },
+  audioLanguages: ["es-AR"],
   scriptureReferences: [
     { book: "Efesios", chapter: 2, fromVerse: 8, toVerse: 9, verseContent: "...", bibleVersion: "RVR60" },
     { book: "Romanos", chapter: 3, fromVerse: 24, toVerse: null, verseContent: "...", bibleVersion: "RVR60" },

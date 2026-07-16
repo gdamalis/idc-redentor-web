@@ -5,13 +5,19 @@ import { Typography } from "@src/components/ui/typography";
 import { Divider } from "@src/components/ui/divider";
 import { AuthorInfo } from "@src/components/features/blog-post-details/AuthorInfo";
 import { SermonByline } from "./SermonByline";
+import { SermonInterpreter } from "./SermonInterpreter";
 import { formatDateLong } from "@src/utils/formatDate";
 import type { Sermon } from "@src/types/Sermon";
 
 interface SermonHeaderProps {
   readonly sermon: Pick<
     Sermon,
-    "title" | "thesis" | "preacher" | "additionalPreachers" | "sermonDate"
+    | "title"
+    | "thesis"
+    | "preacher"
+    | "additionalPreachers"
+    | "sermonDate"
+    | "interpreter"
   >;
 }
 
@@ -65,6 +71,21 @@ export function SermonHeader({ sermon }: SermonHeaderProps) {
           />
         )}
       </div>
+
+      {/* Interpreter — a distinct, labeled block. NEVER folded into `preachers`:
+          an interpreter did not preach (ICR-146 AC3). */}
+      {sermon.interpreter && (
+        <div className="flex flex-col gap-1">
+          <Typography
+            component="p"
+            variant="overline"
+            className="text-xs text-muted-foreground uppercase tracking-wide"
+          >
+            {t("interpreted-by")}
+          </Typography>
+          <SermonInterpreter interpreter={sermon.interpreter} />
+        </div>
+      )}
 
       <Divider className="my-6" />
     </div>

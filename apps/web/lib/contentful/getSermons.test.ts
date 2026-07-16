@@ -327,3 +327,92 @@ describe("getAllSermonSlugs", () => {
     expect(mockFetchGraphQL.mock.calls[1][0]).toContain("skip: 100");
   });
 });
+
+describe("getSermon — audioLanguages + interpreter (ICR-146)", () => {
+  it("defaults audioLanguages to ['es-AR'] when the field is absent (legacy sermons)", async () => {
+    mockFetchGraphQL.mockResolvedValueOnce(
+      makeCollectionResponse([SERMON_ITEM]),
+    );
+
+    const result = (await getSermon("la-gracia-de-dios", "es-AR"))!;
+
+    expect(result.audioLanguages).toEqual(["es-AR"]);
+  });
+
+  it("passes an explicit bilingual audioLanguages through", async () => {
+    mockFetchGraphQL.mockResolvedValueOnce(
+      makeCollectionResponse([
+        { ...SERMON_ITEM, audioLanguages: ["es-AR", "en-US"] },
+      ]),
+    );
+
+    const result = (await getSermon("la-gracia-de-dios", "es-AR"))!;
+
+    expect(result.audioLanguages).toEqual(["es-AR", "en-US"]);
+  });
+
+  it("sanitizes unknown locales out of audioLanguages", async () => {
+    mockFetchGraphQL.mockResolvedValueOnce(
+      makeCollectionResponse([
+        { ...SERMON_ITEM, audioLanguages: ["es-AR", "fr-FR"] },
+      ]),
+    );
+
+    const result = (await getSermon("la-gracia-de-dios", "es-AR"))!;
+
+    expect(result.audioLanguages).toEqual(["es-AR"]);
+  });
+
+  it("maps interpreter when present, and leaves it undefined when absent", async () => {
+    mockFetchGraphQL.mockResolvedValueOnce(
+      makeCollectionResponse([
+        {
+          ...SERMON_ITEM,
+          interpreter: {
+            name: "Jonathan Hanegan",
+            avatar: {
+              url: "https://images.ctfassets.net/jh.jpg",
+              title: "Jonathan Hanegan",
+            },
+            email: "jh@example.com",
+          },
+        },
+      ]),
+    );
+
+    const withInterpreter = (await getSermon("la-gracia-de-dios", "es-AR"))!;
+    expect(withInterpreter.interpreter?.name).toBe("Jonathan Hanegan");
+
+    mockFetchGraphQL.mockResolvedValueOnce(
+      makeCollectionResponse([SERMON_ITEM]),
+    );
+    const without = (await getSermon("la-gracia-de-dios", "es-AR"))!;
+    expect(without.interpreter).toBeUndefined();
+  });
+
+  it("requests both new fields in the detail query", async () => {
+    mockFetchGraphQL.mockResolvedValueOnce(
+      makeCollectionResponse([SERMON_ITEM]),
+    );
+
+    await getSermon("la-gracia-de-dios", "es-AR");
+
+    const query = mockFetchGraphQL.mock.calls[0][0] as string;
+    expect(query).toContain("audioLanguages");
+    expect(query).toContain("interpreter");
+  });
+
+  // The archive query must stay lean (TOO_COMPLEX_QUERY guard) and renders no
+  // badge, so it must NOT gain the new fields.
+  it("does NOT request the new fields in the archive query", async () => {
+    mockFetchGraphQL.mockResolvedValueOnce(
+      makeCollectionResponse([SERMON_ITEM]),
+    );
+
+    await getAllSermons("es-AR");
+
+    const query = mockFetchGraphQL.mock.calls[0][0] as string;
+    expect(query).not.toContain("audioLanguages");
+    expect(query).not.toContain("interpreter");
+  });
+});
