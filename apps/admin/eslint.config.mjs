@@ -12,9 +12,12 @@ const eslintConfig = [
       "no-restricted-syntax": [
         "error",
         {
-          selector: "CallExpression[callee.property.name='db'][arguments.length=0]",
+          // Any arity: a bare client.db() resolves an unasserted name, and
+          // client.db("website") hardcodes a production database name that is
+          // wrong on staging. Both go through the asserted accessors instead.
+          selector: "CallExpression[callee.property.name='db']",
           message:
-            "Bare client.db() is banned in apps/admin — use getAdminDb() (asserted) or an explicit client.db(\"website\").",
+            "client.db() is banned in apps/admin — use getAdminDb() or getContentDb() from src/service/database.service.ts, which assert the URI-resolved database name. Never hardcode a database name.",
         },
       ],
     },
