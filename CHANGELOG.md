@@ -1,3 +1,5 @@
+## [1.27.1](https://github.com/gdamalis/idc-redentor-platform/compare/v1.27.0...v1.27.1) (2026-07-19)
+
 # [1.27.0](https://github.com/gdamalis/idc-redentor-platform/compare/v1.26.0...v1.27.0) (2026-07-16)
 
 ### Features

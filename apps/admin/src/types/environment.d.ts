@@ -21,5 +21,9 @@ declare namespace NodeJS {
     FIREBASE_PROJECT_ID: string;
     FIREBASE_CLIENT_EMAIL: string;
     FIREBASE_PRIVATE_KEY: string;
+
+    // Email — invite + password-reset flows (server-only)
+    RESEND_API_KEY: string;
+    FROM_EMAIL: string;
   }
 }
